@@ -1,0 +1,15 @@
+name: Feedback / scene idea
+description: Tell me what you felt, what to change, or a scene you would love
+labels: [feedback]
+body:
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Your feedback or idea
+      description: How did it feel? What would make it calmer, cosier, or more yours? If you are suggesting a scene, describe the place and the mood.
+    validations:
+      required: true
+  - type: input
+    id: scene
+    attributes:
+      label: Which scene is this about? (optional)

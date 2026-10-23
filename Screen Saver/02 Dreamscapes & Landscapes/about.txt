@@ -1,0 +1,5 @@
+Dreamscapes & Landscapes - misty mountains, quiet lakes, dreamy forests, floating islands, fields, ocean horizons. (The original lake belongs here.)
+
+Each screensaver gets its own folder here, e.g. "Still Lake".
+Inside it: prompt.txt (the AI prompt + tool + date), art\ (generated images), final\ (the picked illustration), notes.txt.
+Keep the tool's licence/terms screenshot or link in notes.txt so usage rights are on record.

@@ -1,0 +1,36 @@
+name: Bug report
+description: Something did not work, or looked wrong
+labels: [bug]
+body:
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      description: "Press Win+R, type winver, press Enter. For example: Windows 11 23H2, build 22631"
+    validations:
+      required: true
+  - type: dropdown
+    id: scene
+    attributes:
+      label: Scene
+      options:
+        - Elsewhere - Rainy Window
+        - Elsewhere - Study Night
+        - Elsewhere - Dashboard Clock
+        - Installer / uninstall
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did you see instead? Number of monitors, screen resolution, and a photo or screenshot help a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log (optional)
+      description: "The last lines of %LOCALAPPDATA%\\ElsewhereWithin\\screensaver.log. Check it for anything personal before pasting."
+      render: text

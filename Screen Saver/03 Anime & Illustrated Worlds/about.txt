@@ -1,0 +1,5 @@
+Anime & Illustrated Worlds - anime bedrooms, night streets, train stations, illustrated cafes, nostalgic cities.
+
+Each screensaver gets its own folder here, e.g. "Night Station".
+Inside it: prompt.txt (the AI prompt + tool + date), art\ (generated images), final\ (the picked illustration), notes.txt.
+Keep the tool's licence/terms screenshot or link in notes.txt so usage rights are on record.

@@ -1,0 +1,5 @@
+Cozy Spaces - warm, lived-in rooms: bedrooms, reading corners, rainy cafes, fireplaces, warm desks, window-side interiors.
+
+Each screensaver gets its own folder here, e.g. "Rainy Window".
+Inside it: prompt.txt (the AI prompt + tool + date), art\ (generated images), final\ (the picked illustration), notes.txt.
+Keep the tool's licence/terms screenshot or link in notes.txt so usage rights are on record.

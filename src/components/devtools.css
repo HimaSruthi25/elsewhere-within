@@ -1,0 +1,123 @@
+/* Development-only panels (?breath-debug, ?water-test, ?ripple-debug).
+   Loaded by DevTools.jsx, which is never part of a production build. */
+
+/* One column on the right, from below the tagline down to just above the
+   SOUND / MOTION buttons, so it covers neither the title, the breathing card
+   nor the controls. --dock-top repeats the title block's sizes in App.css. */
+.debug-dock {
+  --dock-top: calc(
+    max(env(safe-area-inset-top), 0px) + clamp(2.5rem, 11vh, 7.5rem) + 1.05 * clamp(2.2rem, min(7vw, 12vh), 5.25rem) +
+      clamp(0.6rem, 1.6vh, 1rem) + 1.5 * clamp(0.95rem, min(2vw, 3.6vh), 1.35rem) + 0.75rem
+  );
+  position: absolute;
+  z-index: 10;
+  top: var(--dock-top);
+  right: calc(max(env(safe-area-inset-right), 0px) + 0.75rem);
+  width: min(18.5rem, calc(100vw - 1.5rem));
+  max-height: calc(100% - var(--dock-top) - max(env(safe-area-inset-bottom), 0px) - clamp(1rem, 3vh, 2rem) - 44px - 0.75rem);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
+}
+
+.debug-dock__toggle {
+  flex: none;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.debug-dock__panels {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 8px;
+}
+
+.debug-dock__panels[hidden] {
+  display: none;
+}
+
+.debug {
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.68);
+  font: 0.68rem/1.4 ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}
+
+.debug__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.debug__row > span:last-child {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.debug__bar {
+  flex: 1;
+  max-width: 7rem;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+.debug__bar > span {
+  display: block;
+  height: 100%;
+  background: var(--ink);
+}
+
+.debug input[type='range'] {
+  width: 7rem;
+}
+
+.debug__modes {
+  display: grid;
+  gap: 0.1rem;
+  margin: 0.35rem 0;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+}
+
+/* Probe crosshair, at viewport coordinates of the clicked point. */
+.debug-probe {
+  position: fixed;
+  z-index: 9;
+  width: 21px;
+  height: 21px;
+  margin: -10px 0 0 -10px;
+  pointer-events: none;
+  background:
+    linear-gradient(#ff0, #ff0) center / 1px 100% no-repeat,
+    linear-gradient(#ff0, #ff0) center / 100% 1px no-repeat;
+  filter: drop-shadow(0 0 1px #000);
+}
+
+.debug__button {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  background: transparent;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+/* Phones, narrow windows and high zoom: there is no free column beside the
+   centred breathing card, so the panels start hidden (DevTools.jsx) and,
+   when shown, span the width under the tagline. */
+@media (max-width: 760px) {
+  .debug-dock {
+    left: calc(max(env(safe-area-inset-left), 0px) + 0.5rem);
+    right: calc(max(env(safe-area-inset-right), 0px) + 0.5rem);
+    width: auto;
+  }
+}

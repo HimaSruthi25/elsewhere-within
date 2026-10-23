@@ -1,0 +1,5 @@
+Pixel Art & Retro Worlds - pixel bedrooms, retro computers, pixel cities, 8-bit skies, miniature worlds.
+
+Each screensaver gets its own folder here, e.g. "Pixel Room".
+Inside it: prompt.txt (the AI prompt + tool + date), art\ (generated images), final\ (the picked illustration), notes.txt.
+Keep the tool's licence/terms screenshot or link in notes.txt so usage rights are on record.

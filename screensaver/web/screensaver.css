@@ -1,0 +1,7 @@
+/* Screensaver page only (never part of the website build). */
+
+html,
+body {
+  cursor: none;
+  user-select: none;
+}
