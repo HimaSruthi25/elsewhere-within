@@ -4,6 +4,7 @@ import { watchInput } from './input.js'
 import { scenes, resolveSceneId } from './registry.js'
 import { showFallback } from './fallback.js'
 import { createGoodbye } from './goodbye.js'
+import { limitFrameRate, parsePointerMessage } from './wallpaper.js'
 
 const STATUS_DELAY_MS = 5000
 const REVEAL_TIMEOUT_MS = 2000
@@ -17,16 +18,31 @@ export async function runScene(container, { search = window.location.search, reg
   const clock = createClock({ override: { timeOfDay: params.get('time') || undefined, season: params.get('season') || undefined } })
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || params.get('reduced') === '1'
 
-  // Goodbye moment, started by whichever notices input first: the page or the
-  // host. The host waits for "exit:" but never longer than 0.7 s.
-  const goodbye = createGoodbye(container, { host, reducedMotion, inHost: inHost() })
-  const pointOf = (e) => (e && 'clientX' in e ? { x: e.clientX, y: e.clientY } : null)
-  const stopInput = watchInput((reason, e) => goodbye(reason, pointOf(e)))
-  const stopHostMessages = onHostMessage((message) => {
-    const m = /^goodbye (-?\d+) (-?\d+)$/.exec(message)
-    // The host sends physical pixels; the page works in CSS pixels.
-    if (m) goodbye('host saw input', { x: m[1] / devicePixelRatio, y: m[2] / devicePixelRatio })
-  })
+  // Live wallpaper (ElsewhereWallpaper.exe): input never ends the scene. The
+  // host forwards mouse input on the bare desktop as "pointer ..." messages.
+  const wallpaper = params.get('mode') === 'wallpaper'
+  const pointerListeners = new Set()
+  let stopInput = () => {}
+  let stopHostMessages = () => {}
+  let unlimit = () => {}
+  if (wallpaper) {
+    unlimit = limitFrameRate(window)
+    stopHostMessages = onHostMessage((message) => {
+      // The host sends physical pixels; the page works in CSS pixels.
+      const e = parsePointerMessage(message, window.devicePixelRatio || 1)
+      if (e) pointerListeners.forEach((fn) => fn(e))
+    })
+  } else {
+    // Goodbye moment, started by whichever notices input first: the page or the
+    // host. The host waits for "exit:" but never longer than 0.7 s.
+    const goodbye = createGoodbye(container, { host, reducedMotion, inHost: inHost() })
+    const pointOf = (e) => (e && 'clientX' in e ? { x: e.clientX, y: e.clientY } : null)
+    stopInput = watchInput((reason, e) => goodbye(reason, pointOf(e)))
+    stopHostMessages = onHostMessage((message) => {
+      const m = /^goodbye (-?\d+) (-?\d+)$/.exec(message)
+      if (m) goodbye('host saw input', { x: m[1] / devicePixelRatio, y: m[2] / devicePixelRatio })
+    })
+  }
 
   container.style.opacity = '0'
   container.style.transition = reducedMotion ? 'none' : 'opacity 1.2s ease'
@@ -53,6 +69,9 @@ export async function runScene(container, { search = window.location.search, reg
       get timeOfDay() { return clock.timeOfDay },
       get season() { return clock.season },
       reducedMotion,
+      mode: wallpaper ? 'wallpaper' : 'screensaver',
+      // Wallpaper only: fn({ type: 'move'|'down'|'up', x, y }) for mouse input on the bare desktop. Returns an unsubscribe.
+      onPointer(fn) { pointerListeners.add(fn); return () => pointerListeners.delete(fn) },
       subscribe: clock.subscribe,
       ready: reveal,
     }
@@ -78,6 +97,7 @@ export async function runScene(container, { search = window.location.search, reg
       window.removeEventListener('error', onError)
       stopInput()
       stopHostMessages()
+      unlimit()
       clock.stop()
       try { unmount?.() } catch { /* shutting down */ }
     },

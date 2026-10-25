@@ -412,9 +412,30 @@ export function mount(container, ctx) {
     throw new Error('study-night: illustration failed to load')
   }
 
+  // Live wallpaper: dragging the mouse across the desktop wipes a clear trail
+  // through the mist (it mists over again by itself).
+  let pen = null
+  const offPointer = ctx.onPointer?.((e) => {
+    if (e.type === 'up') pen = null
+    if (e.type === 'down') pen = { x: e.x, y: e.y }
+    if (!pen || !v || ctx.reducedMotion || e.type === 'up') return
+    const mg = mist.getContext('2d')
+    mg.save()
+    mg.globalCompositeOperation = 'destination-out'
+    mg.strokeStyle = 'rgba(0,0,0,0.9)'
+    mg.lineCap = 'round'
+    mg.lineWidth = 26 * v.dpr
+    mg.beginPath()
+    mg.moveTo(pen.x * v.dpr, pen.y * v.dpr)
+    mg.lineTo(e.x * v.dpr, e.y * v.dpr + 0.01)
+    mg.stroke()
+    mg.restore()
+    pen = { x: e.x, y: e.y }
+  })
   return {
     unmount() {
       stopped = true
+      offPointer?.()
       cancelAnimationFrame(frame)
       window.removeEventListener('resize', onResize)
       container.replaceChildren()

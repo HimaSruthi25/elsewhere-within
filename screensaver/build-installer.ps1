@@ -22,7 +22,7 @@ function Assert-MicrosoftSigned($path) {
 
 # 1. The screensaver itself.
 if (-not $SkipScreensaverBuild) { & (Join-Path $here 'build.ps1') }
-foreach ($required in 'Microsoft.Web.WebView2.Core.dll', 'Microsoft.Web.WebView2.WinForms.dll', 'WebView2Loader.dll', 'site\index.html', 'site\scenes.json') {
+foreach ($required in 'Microsoft.Web.WebView2.Core.dll', 'Microsoft.Web.WebView2.WinForms.dll', 'WebView2Loader.dll', 'site\index.html', 'site\scenes.json', 'ElsewhereWallpaper.exe') {
   if (-not (Test-Path (Join-Path $out $required))) { throw "screensaver\out is missing $required; run screensaver\build.ps1" }
 }
 if (@(Get-ChildItem $out -Filter 'Elsewhere - *.scr').Count -eq 0) { throw 'screensaver\out has no scene .scr files; run screensaver\build.ps1' }

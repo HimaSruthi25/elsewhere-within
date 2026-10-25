@@ -22,8 +22,9 @@ function ShortPath($path) {
 $oldScr = Join-Path $target 'ElsewhereWithin.scr'
 $oldIsSelected = $selected -and (Test-Path $oldScr) -and (ShortPath $selected) -eq (ShortPath $oldScr)
 
-# A running screensaver holds its .scr and DLLs open.
-Get-Process | Where-Object { $_.Name -eq 'ElsewhereWithin' -or $_.Name -like 'Elsewhere - *' } | Stop-Process -Force
+# A running screensaver or live wallpaper holds its files open. The wallpaper is started again afterwards.
+$wallpaperRunning = @(Get-Process ElsewhereWallpaper -ErrorAction SilentlyContinue).Count -gt 0
+Get-Process | Where-Object { $_.Name -eq 'ElsewhereWithin' -or $_.Name -eq 'ElsewhereWallpaper' -or $_.Name -like 'Elsewhere - *' } | Stop-Process -Force
 Start-Sleep -Milliseconds 700
 
 # Remove our old files: every .scr, and site\. Uninstall.exe and the registry stay as they are.
@@ -43,4 +44,6 @@ if (Test-Path $old) {
   Copy-Item (Join-Path $target $newScr[0]) $old -Force
   Write-Host 'Note: the old "ElsewhereWithin" screensaver is still selected. Pick one of the "Elsewhere - ..." scenes in Screen Saver Settings.'
 }
+# The live wallpaper is copied with everything else (the installer makes it optional). Start it again if it was running.
+if ($wallpaperRunning) { Start-Process (Join-Path $target 'ElsewhereWallpaper.exe') }
 Write-Host ("Deployed {0} scene(s) to {1}; the selected screensaver was not changed." -f $newScr.Count, $target)

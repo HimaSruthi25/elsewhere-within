@@ -83,3 +83,6 @@ Remove-Item $temp -Recurse -Force
 
 $size = (Get-ChildItem $out -Recurse -File | Measure-Object Length -Sum).Sum / 1MB
 Step ("Done: {0} scene(s) in {1} ({2:N1} MB in total)" -f @($scenes.scenes).Count, $out, $size)
+
+# 4. The live wallpaper program (wallpaper\), which shares site\ and the DLLs.
+& (Join-Path (Split-Path $here -Parent) 'wallpaper\build.ps1')

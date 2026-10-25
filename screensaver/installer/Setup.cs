@@ -3,6 +3,7 @@
 //
 //   (no arguments)               install, with dialogs
 //   /quiet                       install without dialogs (does not change the selected screensaver)
+//   /wallpaper                   with /quiet: also install the live wallpaper (ElsewhereWallpaper.exe)
 //   /uninstall [/quiet]          remove it (the installed Uninstall.exe is a copy of this program)
 //   /simulate-missing-webview2   act as if WebView2 were missing (to test that path)
 //
@@ -33,12 +34,15 @@ namespace ElsewhereWithin.Setup
         static readonly string[] OurItems =
         {
             "Microsoft.Web.WebView2.Core.dll", "Microsoft.Web.WebView2.WinForms.dll",
-            "WebView2Loader.dll", "site", "Uninstall.exe",
+            "WebView2Loader.dll", "site", "Uninstall.exe", "ElsewhereWallpaper.exe",
         };
         // One "Elsewhere - <Scene title>.scr" per scene, plus the single
         // ElsewhereWithin.scr of earlier versions.
         const string ScrPrefix = "Elsewhere - ";
         const string OldScr = "ElsewhereWithin.scr";
+        const string WallpaperExe = "ElsewhereWallpaper.exe";
+        const string WallpaperRunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+        const string WallpaperSettingsKey = @"Software\ElsewhereWithin"; // holds only the live wallpaper's settings
 
         static bool IsOurs(string name)
         {
@@ -87,6 +91,12 @@ namespace ElsewhereWithin.Setup
         static string SelectArguments { get { return "desk.cpl,InstallScreenSaver " + ScrPath; } }
 
         static bool quiet;
+        static bool wallpaperFlag;
+        static string WallpaperPath { get { return Path.Combine(InstallDir, WallpaperExe); } }
+        static string WallpaperShortcutPath
+        {
+            get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "Elsewhere, Within live wallpaper.lnk"); }
+        }
 
         [STAThread]
         static int Main(string[] args)
@@ -98,6 +108,7 @@ namespace ElsewhereWithin.Setup
                 string a = arg.ToLowerInvariant();
                 if (a == "/quiet") quiet = true;
                 else if (a == "/uninstall") uninstall = true;
+                else if (a == "/wallpaper") wallpaperFlag = true;
                 else if (a == "/simulate-missing-webview2") simulateMissing = true;
             }
             Application.EnableVisualStyles();
@@ -125,6 +136,12 @@ namespace ElsewhereWithin.Setup
                 "It installs to your user folder and does not need administrator rights.", MessageBoxIcon.Question))
                 return 2;
 
+            // Optional: the live wallpaper. Quiet installs only get it with /wallpaper (or when it was already installed).
+            bool wallpaperWasInstalled = File.Exists(WallpaperPath);
+            bool wallpaperWasRunning = Process.GetProcessesByName("ElsewhereWallpaper").Length > 0;
+            bool wantWallpaper = quiet ? (wallpaperFlag || wallpaperWasInstalled) :
+                Ask("Also install the live wallpaper?\n\nIt shows a scene behind your desktop icons (a tray icon lets you pick the scene, pause it, or quit). It pauses itself when an app covers the desktop, on battery saver and when the screen is locked.\n\nIt is optional: choose No to install only the screensavers.", MessageBoxIcon.Question);
+
             EnsureWebView2(simulateMissing);
 
             // The folder belongs to the screensaver; never touch one holding anything else.
@@ -140,10 +157,13 @@ namespace ElsewhereWithin.Setup
             ClearSelectionIfOurs(true); // an old single ElsewhereWithin.scr is about to go away
             foreach (string path in Directory.GetFileSystemEntries(InstallDir)) Delete(path);
             ExtractPayload();
+            if (!wantWallpaper) Delete(WallpaperPath);
             File.Copy(Application.ExecutablePath, UninstallerPath, true);
             Register();
             CreateShortcut();
-            Log("installed to " + InstallDir);
+            if (wantWallpaper) CreateWallpaperShortcut(); else Delete(WallpaperShortcutPath);
+            Log("installed to " + InstallDir + (wantWallpaper ? " (with the live wallpaper)" : ""));
+            if (wantWallpaper && wallpaperWasRunning) Process.Start(WallpaperPath); // an update: bring it back
 
             if (!quiet)
             {
@@ -153,6 +173,9 @@ namespace ElsewhereWithin.Setup
                     "To remove it: Settings > Apps > Installed apps > " + ProductName + " > Uninstall.", MessageBoxIcon.Information);
                 // Windows' own install command, as used by right-click > Install on a .scr.
                 Process.Start(Rundll32, SelectArguments);
+                if (wantWallpaper)
+                    Tell("The live wallpaper starts when you click OK. Look for its icon near the clock (the ^ arrow); right-click it to pick a scene, pause, start it with Windows, or quit.", MessageBoxIcon.Information);
+                if (wantWallpaper && !wallpaperWasRunning) Process.Start(WallpaperPath);
             }
             return 0;
         }
@@ -290,6 +313,8 @@ namespace ElsewhereWithin.Setup
             StopScreensaver();
             ClearSelectionIfOurs(false);
             Delete(ShortcutPath);
+            Delete(WallpaperShortcutPath);
+            RemoveWallpaperRegistry();
             Registry.CurrentUser.DeleteSubKeyTree(UninstallKey, false);
             DeleteWithRetry(DataDir);
 
@@ -347,6 +372,43 @@ namespace ElsewhereWithin.Setup
                 }
             }
         }
+        static void CreateWallpaperShortcut()
+        {
+            Type shellType = Type.GetTypeFromProgID("WScript.Shell");
+            object shell = Activator.CreateInstance(shellType);
+            try
+            {
+                object link = shellType.InvokeMember("CreateShortcut", BindingFlags.InvokeMethod, null, shell, new object[] { WallpaperShortcutPath });
+                Type t = link.GetType();
+                t.InvokeMember("TargetPath", BindingFlags.SetProperty, null, link, new object[] { WallpaperPath });
+                t.InvokeMember("WorkingDirectory", BindingFlags.SetProperty, null, link, new object[] { InstallDir });
+                t.InvokeMember("Description", BindingFlags.SetProperty, null, link, new object[] { "Start the Elsewhere, Within live wallpaper" });
+                t.InvokeMember("Save", BindingFlags.InvokeMethod, null, link, null);
+                Marshal.FinalReleaseComObject(link);
+            }
+            finally
+            {
+                Marshal.FinalReleaseComObject(shell);
+            }
+        }
+
+        // The live wallpaper's "Start with Windows" entry and its saved settings.
+        static void RemoveWallpaperRegistry()
+        {
+            using (RegistryKey run = Registry.CurrentUser.OpenSubKey(WallpaperRunKey, true))
+                if (run != null) run.DeleteValue("ElsewhereWallpaper", false);
+            using (RegistryKey parent = Registry.CurrentUser.OpenSubKey(WallpaperSettingsKey, true))
+            {
+                if (parent == null) return;
+                parent.DeleteSubKeyTree("Wallpaper", false);
+                if (parent.SubKeyCount == 0 && parent.ValueCount == 0)
+                {
+                    parent.Close();
+                    Registry.CurrentUser.DeleteSubKey(WallpaperSettingsKey, false);
+                }
+            }
+        }
+
         // ---------- helpers ----------
 
         static void StopScreensaver()
@@ -354,7 +416,7 @@ namespace ElsewhereWithin.Setup
             foreach (Process p in Process.GetProcesses())
             {
                 string name = p.ProcessName;
-                if (name != "ElsewhereWithin" && !IsScr(name + ".scr")) continue;
+                if (name != "ElsewhereWithin" && name != "ElsewhereWallpaper" && !IsScr(name + ".scr")) continue;
                 try { p.Kill(); p.WaitForExit(3000); } catch (Exception) { }
             }
             System.Threading.Thread.Sleep(500); // let its WebView2 processes close

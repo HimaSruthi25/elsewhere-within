@@ -38,6 +38,13 @@ desktop. If you have Windows' "reduce motion" setting on, scenes hold still.
 It needs the Microsoft Edge **WebView2 Runtime**, which comes with Windows 11 and
 current Windows 10. If your PC lacks it, the installer offers to install it.
 
+## Live wallpaper (optional, preview)
+
+The installer asks whether to also install **Elsewhere, Within live wallpaper**: the same scenes behind your desktop icons.
+It starts from a tray icon, where you can pick the scene, pause it, start it with Windows, or quit (which restores your normal wallpaper).
+It pauses itself when an app covers the desktop, on Battery saver and when the screen is locked. In Rainy Window and Study Night you can drag the mouse across the bare desktop to wipe the misted glass.
+See [the test checklist](docs/wallpaper-test-checklist.md).
+
 ## Uninstall
 
 **Settings → Apps → Installed apps → Elsewhere, Within screensaver → Uninstall.**
