@@ -158,13 +158,9 @@ namespace ElsewhereWithin
 
         static void ShowSettings(IntPtr owner)
         {
-            string text = (SceneTitle ?? Title) + " (" + Title + " screensaver)\n\n" +
-                "A quiet, silent scene for your screen.\n\n" +
-                "It is silent and never uses the microphone. There is nothing to configure here; " +
-                "choose the wait time in Windows Screen Saver Settings.";
-            MessageBox.Show(owner != IntPtr.Zero ? new OwnerWindow(owner) : null, text, Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            using (var dialog = new SettingsDialog())
+                dialog.ShowDialog(owner != IntPtr.Zero ? (IWin32Window)new OwnerWindow(owner) : null);
         }
-
         static bool exiting;
         static bool leaving;
         static System.Windows.Forms.Timer goodbyeCap;
@@ -507,6 +503,130 @@ namespace ElsewhereWithin
         }
     }
 
+    // Settings (/c): the scene's name, the version, and the automatic-updates switch.
+    // The updater (ElsewhereUpdate.exe) is the only part that uses the network.
+    class SettingsDialog : Form
+    {
+        const string UpdatesKey = @"Software\ElsewhereWithin\Updates";
+        readonly CheckBox automatic = new CheckBox();
+        readonly Label result = new Label();
+        readonly Button checkNow = new Button();
+
+        public SettingsDialog()
+        {
+            Text = Program.Title + " settings";
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            ShowInTaskbar = false;
+            StartPosition = FormStartPosition.CenterScreen;
+            ClientSize = new Size(470, 346);
+            Font = SystemFonts.MessageBoxFont;
+
+            Label title = AddLabel((Program.SceneTitle ?? Program.Title), 16, 12, 438, 32);
+            title.Font = new Font(Font.FontFamily, 13f, FontStyle.Bold);
+            AddLabel("Elsewhere, Within  \u00B7  version " + BuildInfo.Version, 16, 48, 438, 22);
+            AddLabel("A quiet, silent scene for your screen. It never uses the microphone. Choose the wait time in Windows Screen Saver Settings.", 16, 78, 438, 60);
+
+            automatic.Text = "Check for updates automatically (once a day)";
+            automatic.Location = new Point(16, 146);
+            automatic.Size = new Size(438, 24);
+            automatic.Checked = AutomaticUpdates();
+            Controls.Add(automatic);
+
+            AddLabel("Only the updater goes online: it asks GitHub for the latest release, and downloads it if it is newer and its checksum matches. The scenes themselves never use the internet.", 36, 176, 418, 80);
+
+            checkNow.Text = "Check now";
+            checkNow.Location = new Point(36, 262);
+            checkNow.Size = new Size(110, 28);
+            checkNow.Click += delegate { CheckNow(); };
+            Controls.Add(checkNow);
+            result.Location = new Point(156, 267);
+            result.Size = new Size(300, 22);
+            Controls.Add(result);
+
+            var ok = new Button();
+            ok.Text = "OK";
+            ok.DialogResult = DialogResult.OK;
+            ok.Location = new Point(290, 304);
+            ok.Size = new Size(80, 28);
+            ok.Click += delegate { SetAutomaticUpdates(automatic.Checked); };
+            Controls.Add(ok);
+            var cancel = new Button();
+            cancel.Text = "Cancel";
+            cancel.DialogResult = DialogResult.Cancel;
+            cancel.Location = new Point(378, 304);
+            cancel.Size = new Size(80, 28);
+            Controls.Add(cancel);
+            AcceptButton = ok;
+            CancelButton = cancel;
+        }
+
+        Label AddLabel(string text, int x, int y, int w, int h)
+        {
+            var l = new Label();
+            l.Text = text;
+            l.Location = new Point(x, y);
+            l.Size = new Size(w, h);
+            Controls.Add(l);
+            return l;
+        }
+
+        static bool AutomaticUpdates()
+        {
+            using (Microsoft.Win32.RegistryKey key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(UpdatesKey))
+            {
+                object v = key == null ? null : key.GetValue("Automatic");
+                return !(v is int) || (int)v != 0; // on unless switched off
+            }
+        }
+
+        static void SetAutomaticUpdates(bool on)
+        {
+            using (Microsoft.Win32.RegistryKey key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(UpdatesKey))
+                key.SetValue("Automatic", on ? 1 : 0, Microsoft.Win32.RegistryValueKind.DWord);
+            Log.Write("automatic updates: " + (on ? "on" : "off"));
+        }
+
+        // Runs the updater (a forced check) and reports what it found.
+        void CheckNow()
+        {
+            string updater = Path.Combine(Program.AppDir, "ElsewhereUpdate.exe");
+            if (!File.Exists(updater))
+            {
+                result.Text = "The updater is not installed.";
+                return;
+            }
+            checkNow.Enabled = false;
+            result.Text = "Checking...";
+            try
+            {
+                var info = new System.Diagnostics.ProcessStartInfo(updater, "/now");
+                info.UseShellExecute = false;
+                info.CreateNoWindow = true;
+                System.Diagnostics.Process p = System.Diagnostics.Process.Start(info);
+                p.EnableRaisingEvents = true;
+                p.Exited += delegate
+                {
+                    int code = p.ExitCode;
+                    if (IsHandleCreated)
+                        BeginInvoke(new MethodInvoker(delegate
+                        {
+                            checkNow.Enabled = true;
+                            result.Text = code == 0 ? "You have the latest version." :
+                                code == 3 ? "A newer version was found and is installing." :
+                                code == 4 ? "Could not reach GitHub." : "The check failed (see update.log).";
+                        }));
+                };
+            }
+            catch (Exception e)
+            {
+                checkNow.Enabled = true;
+                result.Text = "Could not start the updater.";
+                Log.Write("check now failed: " + e.Message);
+            }
+        }
+    }
     class OwnerWindow : IWin32Window
     {
         readonly IntPtr handle;

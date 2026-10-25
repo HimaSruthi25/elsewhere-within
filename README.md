@@ -56,7 +56,7 @@ This removes the program and its log, and puts the screensaver setting back to
 - Only tested on one Windows 11 PC so far. Other Windows 10/11 machines, multiple
   monitors, high-DPI and older graphics are untested.
 - With several monitors, the scene plays on the main screen; the others go black.
-- The installer is not code-signed, so SmartScreen warns once.
+- The installer is not code-signed, so SmartScreen warns once. The updater trusts GitHub plus the checksum published next to each release; it cannot prove who built a release.
 - The small preview in Screen Saver Settings shows only the scene's name, not the animation.
 - Scenes are drawn in the browser engine of WebView2; on a very old GPU they may
   stutter. Tell me if they do.
@@ -64,16 +64,28 @@ This removes the program and its log, and puts the screensaver setting back to
 
 ## Privacy
 
-Runs entirely on your PC. It does not use the microphone, camera or location,
-and it blocks all network requests from the scene. A small log is kept at
-`%LOCALAPPDATA%\ElsewhereWithin\screensaver.log` (start, errors, why it closed);
-it never leaves your machine.
+The scenes run entirely on your PC: they do not use the microphone, camera or location, and
+all network requests from a scene are blocked.
 
+**The only part that goes online is the updater** (`ElsewhereUpdate.exe`). Once a day and at
+sign-in it asks `api.github.com` for this project's latest release. If a newer one exists it
+downloads the installer and `SHA256SUMS.txt` from GitHub, checks the checksum, and installs it
+quietly. It never runs while a screensaver is active, and it sends nothing about you beyond what
+any web request carries (your IP address, and a user agent like `ElsewhereWithin-Updater/0.1.0`).
+Switch it off in **Screen Saver Settings → Settings → "Check for updates automatically"**; its
+log is `%LOCALAPPDATA%\ElsewhereWithin\update.log`. Uninstalling removes its scheduled task.
+
+A small log of the screensaver (start, errors, why it closed) is kept at
+`%LOCALAPPDATA%\ElsewhereWithin\screensaver.log`; it never leaves your machine.
 ## Feedback
 
 **Please open an [Issue](../../issues/new/choose).** A bug report, "it looked odd
 on my monitor", or an idea for a scene are all welcome. For bugs, include your
 Windows version, which scene, and what happened.
+
+## Releases
+
+The version lives in one place: "version" in package.json. To publish: bump it, commit, then push a tag with the same number (`git tag v0.1.1 && git push origin v0.1.1`). GitHub Actions runs the tests, builds the installer and creates the pre-release with SHA256SUMS.txt.
 
 ## Build it yourself
 

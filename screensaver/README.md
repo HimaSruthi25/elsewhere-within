@@ -9,6 +9,8 @@ Silent, and it never uses the microphone.
 | `build.ps1` | Builds `library/` into `out\site`, compiles the program and writes one `.scr` per scene into `out\`. |
 | `build-installer.ps1` | Packs `out\` into `release\ElsewhereWithin-Setup.exe` (`installer\Setup.cs`). |
 | `deploy.ps1` | Quick update while developing: builds and copies into the installed folder without changing the selected screensaver. |
+| `version-source.ps1` | Writes `Version.g.cs` from `package.json`'s version; every program is compiled with it. |
+| `../updater/` | `ElsewhereUpdate.exe`: the daily update check (the only part that uses the network). |
 | `install.ps1` / `uninstall.ps1` | Developer install without the installer. |
 | `web/` | The earlier screensaver page (the lake). Kept for reference; no longer built. |
 | `lib/`, `out/` | Build outputs (not in git). `lib/` holds Microsoft's WebView2 DLLs, downloaded by `build.ps1` with a pinned version and hash. |

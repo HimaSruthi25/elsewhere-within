@@ -9,6 +9,7 @@ $lib = Join-Path (Split-Path $here -Parent) 'screensaver\lib'
 foreach ($required in (Join-Path $lib 'Microsoft.Web.WebView2.Core.dll'), (Join-Path $lib 'Microsoft.Web.WebView2.WinForms.dll'), (Join-Path $out 'site\scenes.json')) {
   if (-not (Test-Path $required)) { throw "$required is missing; run screensaver\build.ps1 first" }
 }
+$versionSource = & (Join-Path (Split-Path $here -Parent) 'screensaver\version-source.ps1')
 $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 if (-not (Test-Path $csc)) { throw "C# compiler not found at $csc" }
 Write-Host '== Compiling ElsewhereWallpaper.exe'
@@ -17,5 +18,5 @@ Write-Host '== Compiling ElsewhereWallpaper.exe'
   "/reference:$(Join-Path $lib 'Microsoft.Web.WebView2.Core.dll')" `
   "/reference:$(Join-Path $lib 'Microsoft.Web.WebView2.WinForms.dll')" `
   /reference:System.Windows.Forms.dll /reference:System.Drawing.dll `
-  (Join-Path $here 'Logic.cs') (Join-Path $here 'ElsewhereWallpaper.cs')
+  (Join-Path $here 'Logic.cs') (Join-Path $here 'ElsewhereWallpaper.cs') $versionSource
 if ($LASTEXITCODE -ne 0) { throw 'Compiling the wallpaper program failed' }

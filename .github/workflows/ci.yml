@@ -1,0 +1,36 @@
+name: Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint the scene library
+        run: npx eslint library
+      - name: Scene library tests
+        run: npm run test:library
+      - name: Website tests
+        run: npm test
+      - name: Windows program tests (wallpaper and updater logic)
+        shell: powershell
+        run: |
+          powershell -ExecutionPolicy Bypass -File wallpaper\test.ps1
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          powershell -ExecutionPolicy Bypass -File updater\test.ps1
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Build everything (checks that all the C# compiles)
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File screensaver\build.ps1

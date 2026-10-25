@@ -65,6 +65,7 @@ foreach ($name in $webView2Files.Keys) { Copy-Item (Join-Path $lib $name) $out -
 $scenesFile = Join-Path $out 'site\scenes.json'
 if (-not (Test-Path $scenesFile)) { throw 'site\scenes.json is missing; the library build did not write it' }
 $scenes = Get-Content $scenesFile -Raw | ConvertFrom-Json
+$versionSource = & (Join-Path $here 'version-source.ps1')
 $temp = Join-Path ([IO.Path]::GetTempPath()) 'ElsewhereWithin-build'
 New-Item -ItemType Directory -Force $temp | Out-Null
 $exe = Join-Path $temp 'ElsewhereWithin.exe'
@@ -73,7 +74,7 @@ $exe = Join-Path $temp 'ElsewhereWithin.exe'
   "/reference:$(Join-Path $lib 'Microsoft.Web.WebView2.Core.dll')" `
   "/reference:$(Join-Path $lib 'Microsoft.Web.WebView2.WinForms.dll')" `
   /reference:System.Windows.Forms.dll /reference:System.Drawing.dll `
-  (Join-Path $here 'ElsewhereWithin.cs')
+  (Join-Path $here 'ElsewhereWithin.cs') $versionSource
 if ($LASTEXITCODE -ne 0) { throw 'Compiling the screensaver failed' }
 Get-ChildItem $out -Filter *.scr | Remove-Item # including the old single ElsewhereWithin.scr
 foreach ($scene in $scenes.scenes) {
@@ -86,3 +87,6 @@ Step ("Done: {0} scene(s) in {1} ({2:N1} MB in total)" -f @($scenes.scenes).Coun
 
 # 4. The live wallpaper program (wallpaper\), which shares site\ and the DLLs.
 & (Join-Path (Split-Path $here -Parent) 'wallpaper\build.ps1')
+
+# 5. The updater (updater\), also shared.
+& (Join-Path (Split-Path $here -Parent) 'updater\build.ps1')

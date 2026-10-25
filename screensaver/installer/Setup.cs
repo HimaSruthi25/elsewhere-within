@@ -4,6 +4,7 @@
 //   (no arguments)               install, with dialogs
 //   /quiet                       install without dialogs (does not change the selected screensaver)
 //   /wallpaper                   with /quiet: also install the live wallpaper (ElsewhereWallpaper.exe)
+//   /fromupdater                 started by ElsewhereUpdate.exe: also log the result to update.log
 //   /uninstall [/quiet]          remove it (the installed Uninstall.exe is a copy of this program)
 //   /simulate-missing-webview2   act as if WebView2 were missing (to test that path)
 //
@@ -28,13 +29,13 @@ namespace ElsewhereWithin.Setup
     {
         const string Title = "Elsewhere, Within";
         const string ProductName = "Elsewhere, Within screensaver";
-        const string Version = "1.0.0";
+        static string Version { get { return BuildInfo.Version; } } // from package.json, via the generated Version.g.cs
         const string UninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\ElsewhereWithin";
         const string WebView2Client = @"Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}";
         static readonly string[] OurItems =
         {
             "Microsoft.Web.WebView2.Core.dll", "Microsoft.Web.WebView2.WinForms.dll",
-            "WebView2Loader.dll", "site", "Uninstall.exe", "ElsewhereWallpaper.exe",
+            "WebView2Loader.dll", "site", "Uninstall.exe", "ElsewhereWallpaper.exe", "ElsewhereUpdate.exe",
         };
         // One "Elsewhere - <Scene title>.scr" per scene, plus the single
         // ElsewhereWithin.scr of earlier versions.
@@ -42,7 +43,7 @@ namespace ElsewhereWithin.Setup
         const string OldScr = "ElsewhereWithin.scr";
         const string WallpaperExe = "ElsewhereWallpaper.exe";
         const string WallpaperRunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-        const string WallpaperSettingsKey = @"Software\ElsewhereWithin"; // holds only the live wallpaper's settings
+        const string WallpaperSettingsKey = @"Software\ElsewhereWithin"; // all our saved settings (live wallpaper, updates)
 
         static bool IsOurs(string name)
         {
@@ -92,6 +93,8 @@ namespace ElsewhereWithin.Setup
 
         static bool quiet;
         static bool wallpaperFlag;
+        static bool fromUpdater;
+        const string UpdateTaskName = "ElsewhereWithin Update";
         static string WallpaperPath { get { return Path.Combine(InstallDir, WallpaperExe); } }
         static string WallpaperShortcutPath
         {
@@ -109,6 +112,7 @@ namespace ElsewhereWithin.Setup
                 if (a == "/quiet") quiet = true;
                 else if (a == "/uninstall") uninstall = true;
                 else if (a == "/wallpaper") wallpaperFlag = true;
+                else if (a == "/fromupdater") fromUpdater = true;
                 else if (a == "/simulate-missing-webview2") simulateMissing = true;
             }
             Application.EnableVisualStyles();
@@ -133,7 +137,7 @@ namespace ElsewhereWithin.Setup
         {
             if (!Ask("Install the " + ProductName + " for " + Environment.UserName + "?\n\n" +
                 "Quiet scenes for your screen, each its own entry in Screen Saver Settings. It is silent and never uses the microphone.\n\n" +
-                "It installs to your user folder and does not need administrator rights.", MessageBoxIcon.Question))
+                "It installs to your user folder and does not need administrator rights.\n\nOnce a day it checks GitHub for a newer version and installs it quietly. You can switch that off in Screen Saver Settings > Settings. Nothing else uses the internet.", MessageBoxIcon.Question))
                 return 2;
 
             // Optional: the live wallpaper. Quiet installs only get it with /wallpaper (or when it was already installed).
@@ -154,14 +158,18 @@ namespace ElsewhereWithin.Setup
 
             StopScreensaver();
             Directory.CreateDirectory(InstallDir);
+            string selectedScr = SelectedSceneFile(); // the files are replaced; keep the same selection
             ClearSelectionIfOurs(true); // an old single ElsewhereWithin.scr is about to go away
             foreach (string path in Directory.GetFileSystemEntries(InstallDir)) Delete(path);
             ExtractPayload();
             if (!wantWallpaper) Delete(WallpaperPath);
+            RestoreSelection(selectedScr);
             File.Copy(Application.ExecutablePath, UninstallerPath, true);
             Register();
             CreateShortcut();
             if (wantWallpaper) CreateWallpaperShortcut(); else Delete(WallpaperShortcutPath);
+            RegisterUpdateTask();
+            if (fromUpdater) UpdateLog("installed version " + Version + " over the previous one");
             Log("installed to " + InstallDir + (wantWallpaper ? " (with the live wallpaper)" : ""));
             if (wantWallpaper && wallpaperWasRunning) Process.Start(WallpaperPath); // an update: bring it back
 
@@ -314,6 +322,7 @@ namespace ElsewhereWithin.Setup
             ClearSelectionIfOurs(false);
             Delete(ShortcutPath);
             Delete(WallpaperShortcutPath);
+            RemoveUpdateTask();
             RemoveWallpaperRegistry();
             Registry.CurrentUser.DeleteSubKeyTree(UninstallKey, false);
             DeleteWithRetry(DataDir);
@@ -392,23 +401,93 @@ namespace ElsewhereWithin.Setup
             }
         }
 
-        // The live wallpaper's "Start with Windows" entry and its saved settings.
+        // The live wallpaper's "Start with Windows" entry, and all our saved settings
+        // (the live wallpaper's scene, the automatic-updates switch).
         static void RemoveWallpaperRegistry()
         {
             using (RegistryKey run = Registry.CurrentUser.OpenSubKey(WallpaperRunKey, true))
                 if (run != null) run.DeleteValue("ElsewhereWallpaper", false);
-            using (RegistryKey parent = Registry.CurrentUser.OpenSubKey(WallpaperSettingsKey, true))
+            Registry.CurrentUser.DeleteSubKeyTree(WallpaperSettingsKey, false);
+        }
+
+        // ----- updates -----
+
+        // The updater registers its own per-user scheduled task (logon + daily).
+        static void RegisterUpdateTask()
+        {
+            string updater = Path.Combine(InstallDir, "ElsewhereUpdate.exe");
+            if (!File.Exists(updater)) return;
+            try
             {
-                if (parent == null) return;
-                parent.DeleteSubKeyTree("Wallpaper", false);
-                if (parent.SubKeyCount == 0 && parent.ValueCount == 0)
+                var info = new ProcessStartInfo(updater, "/register");
+                info.UseShellExecute = false;
+                info.CreateNoWindow = true;
+                using (Process p = Process.Start(info))
                 {
-                    parent.Close();
-                    Registry.CurrentUser.DeleteSubKey(WallpaperSettingsKey, false);
+                    p.WaitForExit(45000);
+                    Log("update task registration, code " + (p.HasExited ? p.ExitCode.ToString() : "timed out"));
                 }
+            }
+            catch (Exception e)
+            {
+                Log("update task not registered: " + e.Message);
             }
         }
 
+        static void RemoveUpdateTask()
+        {
+            try
+            {
+                var info = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "schtasks.exe"), "/Delete /TN \"" + UpdateTaskName + "\" /F");
+                info.UseShellExecute = false;
+                info.CreateNoWindow = true;
+                using (Process p = Process.Start(info)) p.WaitForExit(30000);
+            }
+            catch (Exception e)
+            {
+                Log("update task not removed: " + e.Message);
+            }
+        }
+
+        static void UpdateLog(string line)
+        {
+            try
+            {
+                Directory.CreateDirectory(DataDir);
+                File.AppendAllText(Path.Combine(DataDir, "update.log"), DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " [installer] " + line + Environment.NewLine);
+            }
+            catch (Exception) { }
+        }
+
+        // ----- keeping the selected screensaver across a reinstall -----
+
+        // The file name of the selected screensaver, if it is one of our scenes. Windows may
+        // store a short (8.3) name such as ELSEWH~3.SCR; short names are handed out again when
+        // the files are recreated, so after a reinstall the same short name can mean another scene.
+        static string SelectedSceneFile()
+        {
+            using (RegistryKey desktop = Registry.CurrentUser.OpenSubKey(@"Control Panel\Desktop"))
+            {
+                string selected = desktop == null ? null : desktop.GetValue("SCRNSAVE.EXE") as string;
+                if (selected != null) selected = selected.Trim().Trim('"');
+                if (string.IsNullOrEmpty(selected) || !Directory.Exists(InstallDir) || !File.Exists(selected)) return null;
+                if (!string.Equals(ShortPath(Path.GetDirectoryName(selected)), ShortPath(InstallDir), StringComparison.OrdinalIgnoreCase)) return null;
+                string name = Path.GetFileName(LongPath(selected));
+                return IsScr(name) && !string.Equals(name, OldScr, StringComparison.OrdinalIgnoreCase) ? name : null;
+            }
+        }
+
+        // Writes the same selection back as a long path, so it cannot drift to another scene.
+        static void RestoreSelection(string name)
+        {
+            if (name == null || !File.Exists(Path.Combine(InstallDir, name))) return;
+            using (RegistryKey desktop = Registry.CurrentUser.OpenSubKey(@"Control Panel\Desktop", true))
+            {
+                if (desktop == null) return;
+                desktop.SetValue("SCRNSAVE.EXE", Path.Combine(InstallDir, name));
+                Log("kept the selected screensaver: " + name);
+            }
+        }
         // ---------- helpers ----------
 
         static void StopScreensaver()
@@ -416,7 +495,7 @@ namespace ElsewhereWithin.Setup
             foreach (Process p in Process.GetProcesses())
             {
                 string name = p.ProcessName;
-                if (name != "ElsewhereWithin" && name != "ElsewhereWallpaper" && !IsScr(name + ".scr")) continue;
+                if (name != "ElsewhereWithin" && name != "ElsewhereWallpaper" && name != "ElsewhereUpdate" && !IsScr(name + ".scr")) continue;
                 try { p.Kill(); p.WaitForExit(3000); } catch (Exception) { }
             }
             System.Threading.Thread.Sleep(500); // let its WebView2 processes close

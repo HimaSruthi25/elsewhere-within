@@ -22,7 +22,7 @@ function Assert-MicrosoftSigned($path) {
 
 # 1. The screensaver itself.
 if (-not $SkipScreensaverBuild) { & (Join-Path $here 'build.ps1') }
-foreach ($required in 'Microsoft.Web.WebView2.Core.dll', 'Microsoft.Web.WebView2.WinForms.dll', 'WebView2Loader.dll', 'site\index.html', 'site\scenes.json', 'ElsewhereWallpaper.exe') {
+foreach ($required in 'Microsoft.Web.WebView2.Core.dll', 'Microsoft.Web.WebView2.WinForms.dll', 'WebView2Loader.dll', 'site\index.html', 'site\scenes.json', 'ElsewhereWallpaper.exe', 'ElsewhereUpdate.exe') {
   if (-not (Test-Path (Join-Path $out $required))) { throw "screensaver\out is missing $required; run screensaver\build.ps1" }
 }
 if (@(Get-ChildItem $out -Filter 'Elsewhere - *.scr').Count -eq 0) { throw 'screensaver\out has no scene .scr files; run screensaver\build.ps1' }
@@ -46,13 +46,14 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 # 4. The installer.
 Step 'Compiling ElsewhereWithin-Setup.exe'
 New-Item -ItemType Directory -Force $release | Out-Null
+$versionSource = & (Join-Path $here 'version-source.ps1')
 $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 try {
   & $csc /nologo /target:winexe /platform:anycpu /optimize+ /warnaserror+ `
     "/out:$setup" "/win32manifest:$(Join-Path $here 'installer\setup.manifest')" `
     "/resource:$payload,payload.zip" "/resource:$bootstrapper,MicrosoftEdgeWebview2Setup.exe" `
     /reference:System.Windows.Forms.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll `
-    (Join-Path $here 'installer\Setup.cs')
+    (Join-Path $here 'installer\Setup.cs') $versionSource
   if ($LASTEXITCODE -ne 0) { throw 'Compiling the installer failed' }
 } finally { Remove-Item $payload -ErrorAction SilentlyContinue }
 
