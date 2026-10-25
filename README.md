@@ -19,7 +19,7 @@ there is no sound.
 | ![Study Night](docs/screenshots/study-night.jpg) | **Study Night** (Cozy Spaces)<br>Someone reading by the window at night, headphones on, rain on the glass. |
 | ![Dashboard Clock](docs/screenshots/dashboard-clock.jpg) | **Dashboard Clock** (Dashboard)<br>A large, quiet time and date over slow colour that follows the time of day. It drifts a little every few minutes so nothing burns into the screen. |
 
-Every scene ends gently: when you move the mouse or press a key it fades out
+As a screensaver, every scene ends gently: when you move the mouse or press a key it fades out
 with a soft ring from your cursor (about half a second) and you are back at the
 desktop. If you have Windows' "reduce motion" setting on, scenes hold still.
 
@@ -40,11 +40,24 @@ current Windows 10. If your PC lacks it, the installer offers to install it.
 
 ## Live wallpaper (optional, preview)
 
-The installer asks whether to also install **Elsewhere, Within live wallpaper**: the same scenes behind your desktop icons.
-It starts from a tray icon, where you can pick the scene, pause it, start it with Windows, or quit (which restores your normal wallpaper).
-It pauses itself when an app covers the desktop, on Battery saver and when the screen is locked. In Rainy Window and Study Night you can drag the mouse across the bare desktop to wipe the misted glass.
-See [the test checklist](docs/wallpaper-test-checklist.md).
+The same scenes can also play **behind your desktop icons** as a live wallpaper
+(`ElsewhereWallpaper.exe`). It is optional and separate from the screensaver.
 
+- **Turn it on:** when you run the installer, answer **Yes** to "Also install the live wallpaper?"
+  It starts straight away. Later, start it from **Start menu → Elsewhere, Within live wallpaper**.
+- **Control it:** it lives in the tray, near the clock (under the ^ arrow). Right-click the icon to pick the
+  scene, **Pause/Resume**, tick **Start with Windows**, or **Quit**.
+- **Turn it off:** **Quit** from the tray menu puts your normal wallpaper back at once. Untick
+  **Start with Windows** so it does not come back at sign-in. Uninstalling removes it entirely.
+- **It stays out of the way:** it **pauses by itself** (no drawing, almost no CPU) while a **full-screen or
+  maximised app** covers the desktop, on **Battery saver**, and while the screen is **locked**. It draws
+  at 30 frames a second at most.
+- **Mouse:** icons, the taskbar and your windows behave exactly as usual. On the bare desktop the mouse
+  talks to the scene: in Rainy Window and Study Night, drag across the glass to wipe the mist. Because of
+  that, a left-drag on the bare desktop does not draw the usual selection rectangle while the wallpaper
+  runs; **Pause** it from the tray when you want that.
+- It needs Windows 10 or 11 with the WebView2 Runtime, and is tested on one Windows 11 PC only.
+  See [the test checklist](docs/wallpaper-test-checklist.md).
 ## Uninstall
 
 **Settings → Apps → Installed apps → Elsewhere, Within screensaver → Uninstall.**
