@@ -55,7 +55,8 @@ test('the dev boost defaults to x1, so it never multiplies the production streng
 })
 
 test('the dev boost is applied only inside the development-only block', async () => {
-  const source = await readFile(new URL('../components/WaterCanvas.jsx', import.meta.url), 'utf8')
+  // Checked out with CRLF line endings on Windows (git's autocrlf), so compare with LF.
+  const source = (await readFile(new URL('../components/WaterCanvas.jsx', import.meta.url), 'utf8')).replace(/\r\n/g, '\n')
   const devBlock = source.indexOf('if (import.meta.env.DEV) {\n          const driven')
   const call = source.indexOf('applyRingBoost(')
   assert.ok(devBlock !== -1 && call > devBlock, 'boost sits in the DEV block')
