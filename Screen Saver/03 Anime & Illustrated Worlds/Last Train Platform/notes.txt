@@ -1,0 +1,28 @@
+Last Train Platform — Anime & Illustrated Worlds
+Approved by Hima: idea + picture 26 Oct 2026; wallpaper preview v0.1 approved 26 Oct 2026.
+
+Usage terms: Figma AI terms — https://www.figma.com/legal/ai-terms/
+(Checked 26 Oct 2026. Pure AI output may not be copyrightable; we use it as part of the scene.)
+Earlier versions: v1 (gemini-3.1-flash-image, "basic drawing" look) rejected for v2 (this one).
+
+Motion (all code, canvas 2D over the picture):
+- rain: 2 depths, slight wind, drops turn golden near the lamp
+- drips falling from the shelter roof edge
+- ripples in platform puddles (left of the yellow line) and in the rice paddies
+- lamp: soft flicker + rare short dips; warm light pool on the floor
+- 2–4 moths circling the lamp
+- green signal pulse; moon glow breathing
+- cat breathing (patch of the picture scaled ~1.4 % upward from the bench, feathered edges)
+
+Wallpaper interaction (no on-screen instructions):
+- cursor comes near the cat's face -> its amber eyes open and follow the cursor (rare slow blink)
+- cursor leaves -> after ~2.6 s the eyes close again
+Screensaver mode ignores the interaction (cat just sleeps and breathes).
+
+Key positions (source pixels in the 3840x2160 picture):
+lamp 945,362 · moon 2858,312 · signal 2112,1088 · cat body patch 805,1085 -> 1115,1266 (bottom = bench top)
+eyes: left 1016,1199 (rot 0.85 rad), right 1048,1211 (rot -0.35 rad) · face centre 1032,1205
+roof drip edge 1000,0 -> 1680,480 · yellow platform edge 1900,1262 -> 2250,2160
+
+Preview test (26 Oct, headless Chromium 1920x1080): no console errors, ~60 fps, eyes open/follow/close verified in screenshots.
+Not done yet: time of day, goodbye moment, library scene, Windows test.

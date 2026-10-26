@@ -14,7 +14,8 @@ install, view, and build the screensaver and to share screenshots of it.
 You may **not** sell it, or redistribute it as standalone art (for example as
 wallpapers, prints, stock images, or inside another product).
 
-The illustrations were AI-generated for Elsewhere, Within with ChatGPT.
+The illustrations were AI-generated for Elsewhere, Within with ChatGPT or Figma AI
+(Last Train Platform, upscaled with Real-ESRGAN).
 
 Not covered by this notice: the lake photographs in `public/assets/` are by
 Ivan Dimitrov, from Unsplash, and remain under the
