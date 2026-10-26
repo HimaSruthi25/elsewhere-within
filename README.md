@@ -3,11 +3,12 @@
 **A place to feel.**
 
 Quiet, silent scenes for your Windows screen: a rainy window with a lit lamp, a
-late-night study, a calm clock. Each scene is its own entry in Windows Screen
+late-night study, a living pond with paper boats, fish and frogs, a soft light
+to follow with your eyes, a calm clock. Each scene is its own entry in Windows Screen
 Saver Settings. Nothing is downloaded while it runs, nothing is recorded, and
 there is no sound.
 
-> **v0.1 Preview — tested on one Windows 11 PC.** It works there, but it has not
+> **v0.1 Preview — tested on two Windows PCs** (Windows 11 and a two-monitor 22H2 PC). It works there, but it has not
 > met your hardware yet. That is exactly why it is public: please try it and
 > tell me what happens (see [Feedback](#feedback)).
 
