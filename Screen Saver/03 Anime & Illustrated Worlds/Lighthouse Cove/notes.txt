@@ -1,0 +1,18 @@
+Lighthouse Cove — Anime & Illustrated Worlds
+Idea first proposed 26 Oct 2026 as "Pixel Lighthouse Cove" (Pixel Art & Retro); Hima asked for anime film style, so it moved here.
+Approved by Hima: idea + picture 26 Oct 2026; v0.1 preview approved 26 Oct 2026.
+Usage terms: Figma AI terms — https://www.figma.com/legal/ai-terms/ (checked 26 Oct 2026).
+
+Motion (code, canvas 2D over the picture):
+- beam sweeps round every 16 s, soft flash when it faces the viewer; brushes the water far out
+- glints on the moon's path and open sea; slow wash on the shore
+- stars twinkle (bright points found in the picture), moon glow breathing
+- chimney smoke, warm window glow
+Beam is drawn on a quarter-resolution layer and scaled up for soft edges.
+
+Wallpaper interaction (no on-screen instructions):
+- mouse moves on the desktop -> the beam slowly turns to the cursor and lights the water there (extra warm glints)
+- ~4 s after the mouse stops -> back to sweeping
+Screensaver mode: beam only sweeps.
+
+Key positions (source pixels in 3840x2160): lantern 2880,352 · moon 1110,450 · chimney 3472,600 · horizon y 1105 · sea x < 2250/2500/2900 (y <1300/<1500/<1720)
