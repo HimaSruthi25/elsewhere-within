@@ -120,7 +120,7 @@ namespace ElsewhereWallpaper
             rebuildTimer.Interval = 2000;
             rebuildTimer.Tick += delegate { rebuildTimer.Stop(); BuildWindows(); };
             watch.Interval = 1500;
-            watch.Tick += delegate { UpdateRendering(); };
+            watch.Tick += delegate { UpdateRendering(); input.CheckAlive(); };
 
             BuildWindows();
             watch.Start();
@@ -622,9 +622,13 @@ namespace ElsewhereWallpaper
 
     // ---------- the mouse hook ----------
 
-    // Only over the bare desktop: forwards move/down/up to the scene and swallows the
-    // left button (no selection rectangle). Over icons, the taskbar or any app window,
-    // everything passes through untouched.
+    // Mouse on the desktop goes to the scene.
+    // Moves: anywhere on the desktop surface (over icons too; a ripple under an icon
+    // does no harm). Presses: on bare desktop the scene gets them and the left button
+    // is swallowed (no selection rectangle). When Explorer can't be asked where the
+    // icons are (some antivirus blocks that), a press still reaches the scene but is
+    // also passed on to Windows, so icons keep working. Over the taskbar or any app
+    // window everything passes through untouched.
     class DesktopInput : IDisposable
     {
         readonly Func<IntPtr, bool> isOurWindow;
@@ -632,13 +636,21 @@ namespace ElsewhereWallpaper
         readonly Native.HookProc proc;
         IntPtr hook;
         bool capturing;      // a left button press we swallowed is still down
+        bool sharing;        // a left button press we forwarded but also passed on is still down
         int lastMoveTick;
         IntPtr iconProcess;  // the process that owns the icon list (Explorer), for hit-testing
         uint iconProcessId;
         IntPtr remote;       // memory in Explorer for the hit-test structure
         Point lastHitPoint;
         int lastHitTick;
-        bool lastHitIcon;
+        int lastHit;         // 1 icon, 0 bare, -1 can't tell
+        // Diagnostics and the watchdog.
+        int lastCallbackTick = Environment.TickCount;
+        int lastCheckTick = Environment.TickCount;
+        Native.POINT lastCursor;
+        bool loggedMove, loggedShared;
+        int missLogs;
+        readonly HashSet<string> loggedProblems = new HashSet<string>();
 
         public bool Enabled;
 
@@ -647,46 +659,96 @@ namespace ElsewhereWallpaper
             this.isOurWindow = isOurWindow;
             this.forward = forward;
             proc = HookCallback; // kept in a field so it is not garbage collected
+            Install("mouse hook installed");
+            Native.GetCursorPos(out lastCursor);
+        }
+
+        void Install(string what)
+        {
             hook = Native.SetWindowsHookEx(Native.WH_MOUSE_LL, proc, Native.GetModuleHandle(null), 0);
-            Log.Write(hook == IntPtr.Zero ? "mouse hook failed" : "mouse hook installed");
+            Log.Write(hook == IntPtr.Zero ? "mouse hook failed (error " + Marshal.GetLastWin32Error() + ")" : what);
+        }
+
+        // Windows silently removes a low-level hook that once answers too slowly.
+        // Called every 1.5 s: if the cursor moved but the hook heard nothing, put it back.
+        public void CheckAlive()
+        {
+            int now = Environment.TickCount;
+            Native.POINT p;
+            if (!Native.GetCursorPos(out p)) return;
+            bool moved = p.X != lastCursor.X || p.Y != lastCursor.Y;
+            if (moved && unchecked(lastCallbackTick - lastCheckTick) < 0)
+            {
+                if (hook != IntPtr.Zero) Native.UnhookWindowsHookEx(hook);
+                Install("mouse hook went quiet (Windows may have removed it): reinstalled");
+                lastCallbackTick = now;
+            }
+            lastCursor = p;
+            lastCheckTick = now;
         }
 
         IntPtr HookCallback(int code, IntPtr wParam, IntPtr lParam)
         {
+            lastCallbackTick = Environment.TickCount;
             if (code >= 0 && Enabled)
             {
                 try
                 {
                     Native.MSLLHOOKSTRUCT m = (Native.MSLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(Native.MSLLHOOKSTRUCT));
+                    int msg = wParam.ToInt32();
+                    Point pt = new Point(m.pt.X, m.pt.Y);
+                    if (msg == Native.WM_MOUSEMOVE)
                     {
-                        int msg = wParam.ToInt32();
-                        Point pt = new Point(m.pt.X, m.pt.Y);
-                        if (msg == Native.WM_MOUSEMOVE)
+                        IntPtr list;
+                        if (Logic.ShouldForwardMove(Environment.TickCount, lastMoveTick) && (capturing || sharing || OverDesktop(pt, out list)))
                         {
-                            if (Logic.ShouldForwardMove(Environment.TickCount, lastMoveTick) && (capturing || OverBareDesktop(pt)))
+                            lastMoveTick = Environment.TickCount;
+                            forward("move", pt);
+                            if (!loggedMove) { loggedMove = true; Log.Write("mouse moves reach the scene"); }
+                        }
+                    }
+                    else if (msg == Native.WM_LBUTTONDOWN)
+                    {
+                        IntPtr list;
+                        if (!OverDesktop(pt, out list))
+                        {
+                            if (missLogs < 5)
                             {
-                                lastMoveTick = Environment.TickCount;
-                                forward("move", pt);
+                                missLogs++;
+                                IntPtr h = Native.WindowFromPoint(new Native.POINT(pt.X, pt.Y));
+                                Log.Write("press at " + pt.X + "," + pt.Y + " over " + Native.ClassOf(h) + " (parent " + Native.ClassOf(Native.GetParent(h)) + "): not the desktop, left alone");
                             }
                         }
-                        else if (msg == Native.WM_LBUTTONDOWN)
+                        else
                         {
-                            if (OverBareDesktop(pt))
+                            int hit = list == IntPtr.Zero ? 0 : IconAt(list, pt);
+                            if (hit == 0)
                             {
                                 capturing = true;
                                 Log.Write("desktop press at " + pt.X + "," + pt.Y + ": forwarded, no selection box");
                                 forward("down", pt);
                                 return (IntPtr)1; // no selection rectangle
                             }
-                        }
-                        else if (msg == Native.WM_LBUTTONUP)
-                        {
-                            if (capturing)
+                            if (hit < 0)
                             {
-                                capturing = false;
-                                forward("up", pt);
-                                return (IntPtr)1;
+                                sharing = true;
+                                if (!loggedShared) { loggedShared = true; Log.Write("desktop press at " + pt.X + "," + pt.Y + ": can't tell if an icon is there, so the scene and Windows both get it"); }
+                                forward("down", pt);
                             }
+                        }
+                    }
+                    else if (msg == Native.WM_LBUTTONUP)
+                    {
+                        if (capturing)
+                        {
+                            capturing = false;
+                            forward("up", pt);
+                            return (IntPtr)1;
+                        }
+                        if (sharing)
+                        {
+                            sharing = false;
+                            forward("up", pt); // and let Windows have it too
                         }
                     }
                 }
@@ -698,40 +760,47 @@ namespace ElsewhereWallpaper
             return Native.CallNextHookEx(hook, code, wParam, lParam);
         }
 
-        bool OverBareDesktop(Point pt)
+        // The desktop surface (our window, the desktop itself, or Explorer's icon list).
+        // list = the icon list when the point is on it, else IntPtr.Zero.
+        bool OverDesktop(Point pt, out IntPtr list)
         {
+            list = IntPtr.Zero;
             IntPtr h = Native.WindowFromPoint(new Native.POINT(pt.X, pt.Y));
             if (h == IntPtr.Zero) return false;
             if (isOurWindow(h)) return true;
             string cls = Native.ClassOf(h);
             if (Logic.IsDesktopSurface(cls)) return true;
-            if (cls == "SysListView32" && Logic.IsDesktopSurface(Native.ClassOf(Native.GetParent(h))))
-                return !IconAt(h, pt);
+            if (cls == "SysListView32" && Logic.IsDesktopSurface(Native.ClassOf(Native.GetParent(h)))) { list = h; return true; }
             return false;
         }
 
-        // Asks Explorer's icon list whether an icon or its label is under the point.
-        // When in doubt (Explorer busy), say yes: then nothing is touched.
-        bool IconAt(IntPtr listView, Point pt)
+        void Problem(string text)
+        {
+            if (loggedProblems.Add(text)) Log.Write("icon check: " + text);
+        }
+
+        // Asks Explorer's icon list whether an icon or its label is under the point:
+        // 1 icon, 0 bare desktop, -1 can't tell (Explorer busy, or access refused).
+        int IconAt(IntPtr listView, Point pt)
         {
             int now = Environment.TickCount;
             if (Math.Abs(pt.X - lastHitPoint.X) <= 2 && Math.Abs(pt.Y - lastHitPoint.Y) <= 2 && unchecked(now - lastHitTick) < 120)
-                return lastHitIcon;
-            bool icon = true;
-            try { icon = HitTest(listView, pt); }
-            catch (Exception e) { Log.Write("hit test failed: " + e.Message); }
+                return lastHit;
+            int hit = -1;
+            try { hit = HitTest(listView, pt); }
+            catch (Exception e) { Problem("hit test failed: " + e.Message); }
             lastHitPoint = pt;
             lastHitTick = now;
-            lastHitIcon = icon;
-            return icon;
+            lastHit = hit;
+            return hit;
         }
 
-        bool HitTest(IntPtr listView, Point pt)
+        int HitTest(IntPtr listView, Point pt)
         {
             uint pid;
             Native.GetWindowThreadProcessId(listView, out pid);
             if (iconProcess == IntPtr.Zero || iconProcessId != pid) ReleaseRemote(pid);
-            if (iconProcess == IntPtr.Zero || remote == IntPtr.Zero) return true;
+            if (iconProcess == IntPtr.Zero || remote == IntPtr.Zero) return -1;
 
             Native.POINT client = new Native.POINT(pt.X, pt.Y);
             Native.ScreenToClient(listView, ref client);
@@ -741,11 +810,11 @@ namespace ElsewhereWallpaper
             BitConverter.GetBytes(client.Y).CopyTo(buffer, 4);
             BitConverter.GetBytes(-1).CopyTo(buffer, 12);
             IntPtr n;
-            if (!Native.WriteProcessMemory(iconProcess, remote, buffer, (IntPtr)buffer.Length, out n)) return true;
+            if (!Native.WriteProcessMemory(iconProcess, remote, buffer, (IntPtr)buffer.Length, out n)) { Problem("writing to Explorer refused (error " + Marshal.GetLastWin32Error() + ")"); return -1; }
             IntPtr result;
-            if (Native.SendMessageTimeout(listView, Native.LVM_HITTEST, IntPtr.Zero, remote, Native.SMTO_ABORTIFHUNG, 40, out result) == IntPtr.Zero) return true;
-            if (!Native.ReadProcessMemory(iconProcess, remote, buffer, (IntPtr)buffer.Length, out n)) return true;
-            return Logic.IsIconHit(BitConverter.ToInt32(buffer, 12), BitConverter.ToInt32(buffer, 8));
+            if (Native.SendMessageTimeout(listView, Native.LVM_HITTEST, IntPtr.Zero, remote, Native.SMTO_ABORTIFHUNG, 40, out result) == IntPtr.Zero) { Problem("Explorer did not answer within 40 ms"); return -1; }
+            if (!Native.ReadProcessMemory(iconProcess, remote, buffer, (IntPtr)buffer.Length, out n)) { Problem("reading from Explorer refused (error " + Marshal.GetLastWin32Error() + ")"); return -1; }
+            return Logic.IsIconHit(BitConverter.ToInt32(buffer, 12), BitConverter.ToInt32(buffer, 8)) ? 1 : 0;
         }
 
         void ReleaseRemote(uint newPid)
@@ -755,11 +824,14 @@ namespace ElsewhereWallpaper
                 if (remote != IntPtr.Zero) Native.VirtualFreeEx(iconProcess, remote, IntPtr.Zero, Native.MEM_RELEASE);
                 Native.CloseHandle(iconProcess);
             }
+            iconProcess = IntPtr.Zero;
             remote = IntPtr.Zero;
             iconProcessId = newPid;
+            if (newPid == 0) return;
             iconProcess = Native.OpenProcess(Native.PROCESS_VM_OPERATION | Native.PROCESS_VM_READ | Native.PROCESS_VM_WRITE, false, newPid);
-            if (iconProcess != IntPtr.Zero)
-                remote = Native.VirtualAllocEx(iconProcess, IntPtr.Zero, (IntPtr)64, Native.MEM_COMMIT | Native.MEM_RESERVE, Native.PAGE_READWRITE);
+            if (iconProcess == IntPtr.Zero) { Problem("opening Explorer refused (error " + Marshal.GetLastWin32Error() + ")"); return; }
+            remote = Native.VirtualAllocEx(iconProcess, IntPtr.Zero, (IntPtr)64, Native.MEM_COMMIT | Native.MEM_RESERVE, Native.PAGE_READWRITE);
+            if (remote == IntPtr.Zero) Problem("memory in Explorer refused (error " + Marshal.GetLastWin32Error() + ")");
         }
 
         public void Dispose()
@@ -937,19 +1009,20 @@ namespace ElsewhereWallpaper
         [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr hWnd, StringBuilder text, int max);
         [DllImport("user32.dll")] public static extern IntPtr WindowFromPoint(POINT p);
-        [DllImport("user32.dll")] public static extern IntPtr SetWindowsHookEx(int id, HookProc proc, IntPtr module, uint thread);
+        [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT p);
+        [DllImport("user32.dll", SetLastError = true)] public static extern IntPtr SetWindowsHookEx(int id, HookProc proc, IntPtr module, uint thread);
         [DllImport("user32.dll")] public static extern bool UnhookWindowsHookEx(IntPtr hook);
         [DllImport("user32.dll")] public static extern IntPtr CallNextHookEx(IntPtr hook, int code, IntPtr wParam, IntPtr lParam);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern uint RegisterWindowMessage(string name);
         [DllImport("user32.dll")] public static extern bool DestroyIcon(IntPtr icon);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern bool SystemParametersInfo(uint action, uint param, string value, uint flags);
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr GetModuleHandle(string name);
-        [DllImport("kernel32.dll")] public static extern IntPtr OpenProcess(uint access, bool inherit, uint pid);
+        [DllImport("kernel32.dll", SetLastError = true)] public static extern IntPtr OpenProcess(uint access, bool inherit, uint pid);
         [DllImport("kernel32.dll")] public static extern bool CloseHandle(IntPtr handle);
-        [DllImport("kernel32.dll")] public static extern IntPtr VirtualAllocEx(IntPtr process, IntPtr address, IntPtr size, uint type, uint protect);
+        [DllImport("kernel32.dll", SetLastError = true)] public static extern IntPtr VirtualAllocEx(IntPtr process, IntPtr address, IntPtr size, uint type, uint protect);
         [DllImport("kernel32.dll")] public static extern bool VirtualFreeEx(IntPtr process, IntPtr address, IntPtr size, uint type);
-        [DllImport("kernel32.dll")] public static extern bool WriteProcessMemory(IntPtr process, IntPtr address, byte[] buffer, IntPtr size, out IntPtr written);
-        [DllImport("kernel32.dll")] public static extern bool ReadProcessMemory(IntPtr process, IntPtr address, byte[] buffer, IntPtr size, out IntPtr read);
+        [DllImport("kernel32.dll", SetLastError = true)] public static extern bool WriteProcessMemory(IntPtr process, IntPtr address, byte[] buffer, IntPtr size, out IntPtr written);
+        [DllImport("kernel32.dll", SetLastError = true)] public static extern bool ReadProcessMemory(IntPtr process, IntPtr address, byte[] buffer, IntPtr size, out IntPtr read);
         [DllImport("kernel32.dll")] static extern bool GetSystemPowerStatus(out SYSTEM_POWER_STATUS status);
         [DllImport("dwmapi.dll")] static extern int DwmGetWindowAttribute(IntPtr hWnd, int attribute, out int value, int size);
 
