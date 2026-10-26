@@ -58,9 +58,28 @@ namespace ElsewhereWallpaper
             return className == "Progman" || className == "WorkerW" || className == "SHELLDLL_DefView";
         }
 
-        public static bool ShouldRender(bool userPaused, bool covered, bool batterySaver, bool locked)
+        // Run: animating. Freeze: still on screen but the page holds its frames, so
+        // uncovering the desktop shows the scene at once (no wallpaper flash).
+        // Suspend: hidden and suspended; resuming takes a moment, so only for long pauses.
+        public enum RenderMode { Run, Freeze, Suspend }
+
+        public static RenderMode DecideMode(bool userPaused, bool covered, bool batterySaver, bool locked)
         {
-            return !(userPaused || covered || batterySaver || locked);
+            if (userPaused || batterySaver || locked) return RenderMode.Suspend;
+            return covered ? RenderMode.Freeze : RenderMode.Run;
+        }
+
+        // Sent to the page; library\core\wallpaper.js parseFreezeMessage reads them.
+        public static string FreezeMessage(bool freeze)
+        {
+            return freeze ? "freeze" : "unfreeze";
+        }
+
+        // WinEvent callbacks about a window itself (not a caret, a menu or a child object).
+        public const int ObjIdWindow = 0, ChildIdSelf = 0;
+        public static bool IsWindowEvent(int idObject, int idChild)
+        {
+            return idObject == ObjIdWindow && idChild == ChildIdSelf;
         }
 
         // Result of the desktop list's LVM_HITTEST: on an icon or its label.

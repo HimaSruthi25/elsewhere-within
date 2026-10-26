@@ -38,12 +38,17 @@ static class LogicTests
         Check(Logic.IsDesktopSurface("SHELLDLL_DefView") && Logic.IsDesktopSurface("Progman") && Logic.IsDesktopSurface("WorkerW"), "desktop surfaces");
         Check(!Logic.IsDesktopSurface("Shell_TrayWnd") && !Logic.IsDesktopSurface("SysListView32"), "taskbar and icon list are not bare surfaces");
 
-        // Render decision: any one reason pauses.
-        Check(Logic.ShouldRender(false, false, false, false), "renders when nothing stops it");
-        Check(!Logic.ShouldRender(true, false, false, false), "user pause");
-        Check(!Logic.ShouldRender(false, true, false, false), "covered");
-        Check(!Logic.ShouldRender(false, false, true, false), "battery saver");
-        Check(!Logic.ShouldRender(false, false, false, true), "locked");
+        // Render decision: covered alone freezes; any other reason suspends.
+        Check(Logic.DecideMode(false, false, false, false) == Logic.RenderMode.Run, "runs when nothing stops it");
+        Check(Logic.DecideMode(false, true, false, false) == Logic.RenderMode.Freeze, "covered only: freeze, not hide");
+        Check(Logic.DecideMode(true, false, false, false) == Logic.RenderMode.Suspend, "user pause suspends");
+        Check(Logic.DecideMode(false, false, true, false) == Logic.RenderMode.Suspend, "battery saver suspends");
+        Check(Logic.DecideMode(false, false, false, true) == Logic.RenderMode.Suspend, "locked suspends");
+        Check(Logic.DecideMode(true, true, false, false) == Logic.RenderMode.Suspend, "paused and covered suspends");
+        Check(Logic.DecideMode(false, true, true, true) == Logic.RenderMode.Suspend, "covered and locked suspends");
+        Check(Logic.FreezeMessage(true) == "freeze" && Logic.FreezeMessage(false) == "unfreeze", "freeze messages");
+        Check(Logic.IsWindowEvent(0, 0), "a window event");
+        Check(!Logic.IsWindowEvent(-8, 0) && !Logic.IsWindowEvent(0, 3), "caret or child object events are not window events");
 
         // Icon hit test: LVHT_NOWHERE=1, ONITEMICON=2, ONITEMLABEL=4, ONITEMSTATEICON=8, ABOVE=8? (flags only matter with an item).
         Check(!Logic.IsIconHit(-1, 1), "empty desktop (no item, NOWHERE) is not an icon");

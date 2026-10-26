@@ -12,6 +12,58 @@ export function parsePointerMessage(message, dpr = 1) {
   return { type: m[1], x: Number(m[2]) / dpr, y: Number(m[3]) / dpr }
 }
 
+// "freeze" -> true, "unfreeze" -> false; anything else -> null. The host sends these
+// while a window covers the desktop: the page stays visible but stops animating.
+export function parseFreezeMessage(message) {
+  if (message === 'freeze') return true
+  if (message === 'unfreeze') return false
+  return null
+}
+
+// While frozen, requestAnimationFrame callbacks are held instead of run, so the
+// frame loop (and the CPU use) stops; unfreeze runs them again. Held ids are
+// negative so they never clash with real ones. Returns { freeze, unfreeze, restore }.
+export function createFreezeGate(target) {
+  const original = { raf: target.requestAnimationFrame, caf: target.cancelAnimationFrame }
+  const realRaf = original.raf.bind(target)
+  const realCaf = original.caf.bind(target)
+  let frozen = false
+  let nextId = -1
+  const held = new Map()
+  const moved = new Map() // held id -> real id, once unfrozen
+
+  target.requestAnimationFrame = (cb) => {
+    if (!frozen) return realRaf(cb)
+    const id = nextId--
+    held.set(id, cb)
+    return id
+  }
+  target.cancelAnimationFrame = (id) => {
+    if (held.delete(id)) return
+    if (moved.has(id)) { realCaf(moved.get(id)); moved.delete(id); return }
+    realCaf(id)
+  }
+
+  return {
+    freeze() { frozen = true },
+    unfreeze() {
+      if (!frozen) return
+      frozen = false
+      const callbacks = [...held]
+      held.clear()
+      for (const [id, cb] of callbacks) {
+        moved.set(id, realRaf((now) => { moved.delete(id); cb(now) }))
+      }
+    },
+    restore() {
+      frozen = false
+      held.clear()
+      target.requestAnimationFrame = original.raf
+      target.cancelAnimationFrame = original.caf
+    },
+  }
+}
+
 // Caps requestAnimationFrame at fps for every scene: one real frame loop runs
 // the callbacks at most fps times a second. Returns a function that undoes it.
 export function limitFrameRate(target, fps = WALLPAPER_FPS) {

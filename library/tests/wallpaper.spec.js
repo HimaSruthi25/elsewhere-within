@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest'
-import { limitFrameRate, parsePointerMessage } from '../core/wallpaper.js'
+import { createFreezeGate, limitFrameRate, parseFreezeMessage, parsePointerMessage } from '../core/wallpaper.js'
 import { runScene } from '../core/runner.js'
 
 describe('parsePointerMessage', () => {
@@ -56,6 +56,72 @@ describe('limitFrameRate', () => {
     t.run(10)
     expect(cb).not.toHaveBeenCalled()
     undo()
+    expect(t.requestAnimationFrame).toBe(raf)
+  })
+})
+
+describe('parseFreezeMessage', () => {
+  it('maps freeze and unfreeze, and ignores anything else', () => {
+    expect(parseFreezeMessage('freeze')).toBe(true)
+    expect(parseFreezeMessage('unfreeze')).toBe(false)
+    for (const other of ['', 'Freeze', 'freeze ', 'pointer move 1 2', 'goodbye 1 2']) {
+      expect(parseFreezeMessage(other)).toBeNull()
+    }
+  })
+})
+
+describe('createFreezeGate', () => {
+  it('holds frame callbacks while frozen and runs them after unfreeze', () => {
+    const t = fakeTarget()
+    const gate = createFreezeGate(t)
+    let calls = 0
+    const loop = () => { calls++; t.requestAnimationFrame(loop) }
+    t.requestAnimationFrame(loop)
+    t.run(5)
+    expect(calls).toBe(5)
+    gate.freeze()
+    t.run(5) // the frame already queued runs once, then the loop is held
+    expect(calls).toBe(6)
+    t.run(60)
+    expect(calls).toBe(6)
+    gate.unfreeze()
+    t.run(5)
+    expect(calls).toBe(11)
+  })
+  it('cancels held callbacks, before and after unfreeze', () => {
+    const t = fakeTarget()
+    const gate = createFreezeGate(t)
+    gate.freeze()
+    const a = vi.fn()
+    const b = vi.fn()
+    const c = vi.fn()
+    t.cancelAnimationFrame(t.requestAnimationFrame(a))
+    t.requestAnimationFrame(b)
+    const idC = t.requestAnimationFrame(c)
+    gate.unfreeze()
+    t.cancelAnimationFrame(idC)
+    t.run(2)
+    expect(a).not.toHaveBeenCalled()
+    expect(b).toHaveBeenCalledTimes(1)
+    expect(c).not.toHaveBeenCalled()
+  })
+  it('stacks on the frame limiter and restores cleanly', () => {
+    const t = fakeTarget()
+    const raf = t.requestAnimationFrame
+    const stopLimit = limitFrameRate(t, 30)
+    const gate = createFreezeGate(t)
+    let calls = 0
+    const loop = () => { calls++; t.requestAnimationFrame(loop) }
+    t.requestAnimationFrame(loop)
+    gate.freeze()
+    t.run(120)
+    const frozenCalls = calls
+    expect(frozenCalls).toBeLessThanOrEqual(1)
+    gate.unfreeze()
+    t.run(120)
+    expect(calls).toBeGreaterThan(frozenCalls + 50)
+    gate.restore()
+    stopLimit()
     expect(t.requestAnimationFrame).toBe(raf)
   })
 })

@@ -4,7 +4,7 @@ import { watchInput } from './input.js'
 import { scenes, resolveSceneId } from './registry.js'
 import { showFallback } from './fallback.js'
 import { createGoodbye } from './goodbye.js'
-import { limitFrameRate, parsePointerMessage } from './wallpaper.js'
+import { createFreezeGate, limitFrameRate, parseFreezeMessage, parsePointerMessage } from './wallpaper.js'
 
 const STATUS_DELAY_MS = 5000
 const REVEAL_TIMEOUT_MS = 2000
@@ -26,12 +26,21 @@ export async function runScene(container, { search = window.location.search, reg
   let stopHostMessages = () => {}
   let unlimit = () => {}
   if (wallpaper) {
-    unlimit = limitFrameRate(window)
+    const stopLimit = limitFrameRate(window)
+    const gate = createFreezeGate(window) // outermost: held frames never reach the limiter
+    unlimit = () => { gate.restore(); stopLimit() }
     stopHostMessages = onHostMessage((message) => {
+      const freeze = parseFreezeMessage(message)
+      if (freeze !== null) {
+        if (freeze) gate.freeze()
+        else gate.unfreeze()
+        return
+      }
       // The host sends physical pixels; the page works in CSS pixels.
       const e = parsePointerMessage(message, window.devicePixelRatio || 1)
       if (e) pointerListeners.forEach((fn) => fn(e))
     })
+    notifyHost('ready') // the host repeats the current freeze state
   } else {
     // Goodbye moment, started by whichever notices input first: the page or the
     // host. The host waits for "exit:" but never longer than 0.7 s.

@@ -88,6 +88,8 @@ namespace ElsewhereWallpaper
         readonly ContextMenuStrip menu = new ContextMenuStrip();
         readonly System.Windows.Forms.Timer watch = new System.Windows.Forms.Timer();
         readonly System.Windows.Forms.Timer rebuildTimer = new System.Windows.Forms.Timer();
+        readonly System.Windows.Forms.Timer settle = new System.Windows.Forms.Timer(); // one update per burst of window events
+        readonly WindowEvents winEvents;
         readonly List<WallpaperWindow> windows = new List<WallpaperWindow>();
         readonly DesktopInput input;
         readonly MessageWindow messages;
@@ -119,8 +121,11 @@ namespace ElsewhereWallpaper
 
             rebuildTimer.Interval = 2000;
             rebuildTimer.Tick += delegate { rebuildTimer.Stop(); BuildWindows(); };
-            watch.Interval = 1500;
+            watch.Interval = 1500; // backup; the window events below react within ~150 ms
             watch.Tick += delegate { UpdateRendering(); input.CheckAlive(); };
+            settle.Interval = 150;
+            settle.Tick += delegate { settle.Stop(); UpdateRendering(); };
+            winEvents = new WindowEvents(delegate { if (!settle.Enabled) settle.Start(); });
 
             BuildWindows();
             watch.Start();
@@ -219,9 +224,9 @@ namespace ElsewhereWallpaper
                 bool covered = false;
                 foreach (Rectangle r in covering)
                     if (Logic.Covers(r, w.Monitor.Bounds, w.Monitor.WorkingArea)) { covered = true; break; }
-                bool render = Logic.ShouldRender(userPaused, covered, batterySaver, locked);
-                w.SetRendering(render);
-                anyRendering |= render;
+                Logic.RenderMode mode = Logic.DecideMode(userPaused, covered, batterySaver, locked);
+                w.SetMode(mode);
+                anyRendering |= mode == Logic.RenderMode.Run;
             }
             // While paused, the desktop behaves normally (selection rectangle and all).
             input.Enabled = anyRendering && !userPaused && !locked;
@@ -346,6 +351,8 @@ namespace ElsewhereWallpaper
         {
             Log.Write("quit");
             watch.Stop();
+            settle.Stop();
+            winEvents.Dispose();
             rebuildTimer.Stop();
             Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplayChanged;
             Microsoft.Win32.SystemEvents.SessionSwitch -= OnSessionSwitch;
@@ -424,8 +431,8 @@ namespace ElsewhereWallpaper
         public readonly Screen Monitor;
         WebView2 webView;
         string pendingUrl;
-        bool wantRendering = true;
-        bool rendering = true;
+        Logic.RenderMode wantMode = Logic.RenderMode.Run;
+        Logic.RenderMode mode = Logic.RenderMode.Run;
         bool disposed;
 
         public bool IsCreated { get { return IsHandleCreated; } }
@@ -480,40 +487,58 @@ namespace ElsewhereWallpaper
             if (webView != null && webView.CoreWebView2 != null) webView.CoreWebView2.Navigate(url);
         }
 
+        // Pointer messages only matter while the scene runs.
         public void Post(string message)
+        {
+            if (mode == Logic.RenderMode.Run) PostRaw(message);
+        }
+
+        void PostRaw(string message)
         {
             try
             {
-                if (rendering && webView != null && webView.CoreWebView2 != null) webView.CoreWebView2.PostWebMessageAsString(message);
+                if (mode != Logic.RenderMode.Suspend && webView != null && webView.CoreWebView2 != null) webView.CoreWebView2.PostWebMessageAsString(message);
             }
             catch (Exception) { }
         }
 
-        // Hidden and suspended = no drawing, no timers worth mentioning.
-        public void SetRendering(bool on)
+        // Run = animating. Freeze = visible, but the page holds its frames (the covered
+        // desktop; uncovering it shows the scene at once). Suspend = hidden and
+        // suspended: no drawing, no timers worth mentioning.
+        public void SetMode(Logic.RenderMode newMode)
         {
-            wantRendering = on;
-            ApplyRendering();
+            wantMode = newMode;
+            ApplyMode();
         }
 
-        async void ApplyRendering()
+        // The page just loaded (or reloaded): tell it where we are.
+        public void RepeatFreezeState()
         {
-            if (disposed || webView == null || webView.CoreWebView2 == null || rendering == wantRendering) return;
-            rendering = wantRendering;
+            if (mode != Logic.RenderMode.Run) PostRaw(Logic.FreezeMessage(mode == Logic.RenderMode.Freeze));
+        }
+
+        async void ApplyMode()
+        {
+            if (disposed || webView == null || webView.CoreWebView2 == null || mode == wantMode) return;
+            Logic.RenderMode previous = mode;
+            mode = wantMode;
             try
             {
-                if (rendering)
+                if (mode == Logic.RenderMode.Suspend)
+                {
+                    webView.Visible = false;
+                    Log.Write("paused " + Monitor.DeviceName);
+                    await webView.CoreWebView2.TrySuspendAsync();
+                    return;
+                }
+                if (previous == Logic.RenderMode.Suspend)
                 {
                     webView.CoreWebView2.Resume();
                     webView.Visible = true;
                     Log.Write("resumed " + Monitor.DeviceName);
                 }
-                else
-                {
-                    webView.Visible = false;
-                    Log.Write("paused " + Monitor.DeviceName);
-                    await webView.CoreWebView2.TrySuspendAsync();
-                }
+                else Log.Write((mode == Logic.RenderMode.Freeze ? "frozen " : "unfrozen ") + Monitor.DeviceName);
+                PostRaw(Logic.FreezeMessage(mode == Logic.RenderMode.Freeze));
             }
             catch (Exception e)
             {
@@ -543,8 +568,8 @@ namespace ElsewhereWallpaper
                 if (disposed) return;
                 Configure(webView.CoreWebView2);
                 webView.CoreWebView2.Navigate(pendingUrl);
-                rendering = true;
-                ApplyRendering();
+                mode = Logic.RenderMode.Run; // a fresh page runs; bring it to the wanted mode
+                ApplyMode();
             }
             catch (Exception e)
             {
@@ -595,7 +620,8 @@ namespace ElsewhereWallpaper
             core.WebMessageReceived += (sender, e) =>
             {
                 string message = e.TryGetWebMessageAsString();
-                if (message != null) Log.Write("page: " + message);
+                if (message == "ready") RepeatFreezeState(); // the page's handler exists now
+                else if (message != null) Log.Write("page: " + message);
             };
             core.ProcessFailed += (sender, e) =>
             {
@@ -617,6 +643,47 @@ namespace ElsewhereWallpaper
                 try { webView.Dispose(); } catch (Exception) { }
             }
             base.Dispose(disposing);
+        }
+    }
+
+    // ---------- window events ----------
+
+    // Tells the tray app at once when the foreground window changes, a window is
+    // minimised or restored, or a top-level window moves or resizes (Win+D, maximise,
+    // snap), so it does not wait for the 1.5 s timer. Callbacks arrive on the UI thread.
+    class WindowEvents : IDisposable
+    {
+        readonly Native.WinEventProc proc; // kept so the garbage collector cannot free it
+        readonly List<IntPtr> hooks = new List<IntPtr>();
+        readonly Action changed;
+
+        public WindowEvents(Action changed)
+        {
+            this.changed = changed;
+            proc = OnEvent;
+            Hook(Native.EVENT_SYSTEM_FOREGROUND, Native.EVENT_SYSTEM_FOREGROUND);
+            Hook(Native.EVENT_SYSTEM_MINIMIZESTART, Native.EVENT_SYSTEM_MINIMIZEEND);
+            Hook(Native.EVENT_OBJECT_LOCATIONCHANGE, Native.EVENT_OBJECT_LOCATIONCHANGE);
+        }
+
+        void Hook(uint min, uint max)
+        {
+            IntPtr hook = Native.SetWinEventHook(min, max, IntPtr.Zero, proc, 0, 0, Native.WINEVENT_OUTOFCONTEXT | Native.WINEVENT_SKIPOWNPROCESS);
+            if (hook == IntPtr.Zero) Log.Write("window event hook " + min.ToString("X") + " failed; the timer still works");
+            else hooks.Add(hook);
+        }
+
+        void OnEvent(IntPtr hook, uint evt, IntPtr hwnd, int idObject, int idChild, uint thread, uint time)
+        {
+            if (hwnd == IntPtr.Zero || !Logic.IsWindowEvent(idObject, idChild)) return;
+            if (Native.GetAncestor(hwnd, Native.GA_ROOT) != hwnd) return; // top-level windows only
+            changed();
+        }
+
+        public void Dispose()
+        {
+            foreach (IntPtr hook in hooks) Native.UnhookWinEvent(hook);
+            hooks.Clear();
         }
     }
 
@@ -962,6 +1029,9 @@ namespace ElsewhereWallpaper
         public const uint MEM_COMMIT = 0x1000, MEM_RESERVE = 0x2000, MEM_RELEASE = 0x8000, PAGE_READWRITE = 4;
         public const uint SPI_SETDESKWALLPAPER = 0x14, SPIF_SENDCHANGE = 2;
         const int DWMWA_CLOAKED = 14;
+        public const uint EVENT_SYSTEM_FOREGROUND = 0x3, EVENT_SYSTEM_MINIMIZESTART = 0x16, EVENT_SYSTEM_MINIMIZEEND = 0x17, EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
+        public const uint WINEVENT_OUTOFCONTEXT = 0, WINEVENT_SKIPOWNPROCESS = 2;
+        public const uint GA_ROOT = 2;
 
         [StructLayout(LayoutKind.Sequential)]
         public struct POINT
@@ -990,6 +1060,11 @@ namespace ElsewhereWallpaper
 
         public delegate IntPtr HookProc(int code, IntPtr wParam, IntPtr lParam);
         public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+        public delegate void WinEventProc(IntPtr hook, uint evt, IntPtr hwnd, int idObject, int idChild, uint thread, uint time);
+
+        [DllImport("user32.dll")] public static extern IntPtr SetWinEventHook(uint min, uint max, IntPtr module, WinEventProc proc, uint pid, uint thread, uint flags);
+        [DllImport("user32.dll")] public static extern bool UnhookWinEvent(IntPtr hook);
+        [DllImport("user32.dll")] public static extern IntPtr GetAncestor(IntPtr hWnd, uint flags);
 
         [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindow(string cls, string title);
