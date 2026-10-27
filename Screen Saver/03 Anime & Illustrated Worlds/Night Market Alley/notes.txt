@@ -1,0 +1,19 @@
+Night Market Alley — Anime & Illustrated Worlds (first proposed as Pixel Art & Retro Worlds)
+Approved by Hima: idea 27 Oct 2026 (batch 6 #2); preview v0.3 (picture B) approved 27 Oct 2026.
+
+Usage terms: Canva AI image generation (check Canva's terms before a public release).
+Earlier versions: v0.1 pixel art (640x360 re-pixelated) — "not clear, I want 1080 HD"; v0.2 full HD of the
+same Gamma picture; Hima then asked for the anime film style and chose picture B (Canva) over the inked Gamma picture.
+
+Motion (canvas 2D over the picture):
+- 116 string-light bulbs (cut out of the picture) sway a little and flicker, with soft halos;
+  a gentle wave of light runs along the strings every 14-26 s
+- paper lanterns flicker; steam rises from the two stockpots and the griddle
+- drips fall from the awning edges and splash; warm glints and raindrop rings in the puddles
+- the cat breathes; stars twinkle in the strip of sky
+- time of day: the alley is always night; the sky strip is tinted at dusk / dawn / day
+
+Wallpaper interaction (no on-screen instructions):
+- run the cursor along a string of bulbs: they flash and a wave of light and swing runs along the strings
+- click a bulb: a bigger wave
+Screensaver mode ignores the interaction.
