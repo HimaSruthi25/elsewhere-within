@@ -4,11 +4,18 @@
 //   - rain in two depths that turns golden near the lamp, drips from the roof edge;
 //   - ripples in the platform puddles and the flooded rice fields;
 //   - a flickering lamp with a few moths, a pulsing green signal, a breathing moon glow;
-//   - the cat breathing (a tiny, feathered warp of the picture itself).
+//   - the cat breathing (a tiny, feathered warp of the picture itself);
+//   - an old 1800s steam train (train.js): one 3D train that comes out of the
+//     distance along the real line of the rails, waits at the platform with steam
+//     and smoke, then rolls on past you until the last coach has gone by.
 // Live wallpaper: when the mouse comes near the cat it opens its eyes and
 // watches the cursor, and dozes off again a few seconds after it leaves.
+// Clicking the green signal (or the empty track) calls the train; clicking the
+// waiting train makes it whistle (a burst of steam) and pull away.
+// The cat also wakes and watches the train while it is in.
 // With reducedMotion everything is drawn once and nothing moves.
 import photoUrl from './last-train-platform.jpg'
+import { createTrain } from './train.js'
 
 // Places in the illustration, as fractions of its width and height
 // (measured on the 3840×2160 original).
@@ -59,6 +66,8 @@ export function mount(container, ctx) {
   let lastNear = -1e9
   let stopped = false
   const ptr = { x: -1e4, y: -1e4, seen: false }
+  const train = createTrain()
+  let trainView = { beam: null, near: 0, lens: null }
 
   const X = (fx) => v.ox + fx * v.iw * v.s
   const Y = (fy) => v.oy + fy * v.ih * v.s
@@ -171,8 +180,9 @@ export function mount(container, ctx) {
       if (d.y - d.len > v.h || d.x < -120) Object.assign(d, newDrop(false))
     }
 
+    train.update(dt)
     const near = ptr.seen && Math.hypot(ptr.x - X(FACE.x), ptr.y - Y(FACE.y)) < Math.max(170, px(1800))
-    if (near) lastNear = now
+    if (near || trainView.near > 0.25) lastNear = now
     const target = now - lastNear < AWAKE_LINGER_MS ? 1 : 0
     awake += (target - awake) * Math.min(1, dt * (target ? 2.2 : 1.1))
   }
@@ -211,8 +221,11 @@ export function mount(container, ctx) {
     const open = awake * (Math.sin(t * 0.9) > 0.995 ? 0.15 : 1) // rare slow blink
     const ex = X(e.x)
     const ey = Y(e.y)
-    let dx = ptr.x - ex
-    let dy = ptr.y - ey
+    // watch the hand if it is near, otherwise the train's lamp
+    const handNear = ptr.seen && Math.hypot(ptr.x - X(FACE.x), ptr.y - Y(FACE.y)) < Math.max(170, px(1800))
+    const look = !handNear && trainView.lens ? { x: X(trainView.lens[0] / 3840), y: Y(trainView.lens[1] / 2160) } : ptr
+    let dx = look.x - ex
+    let dy = look.y - ey
     const d = Math.hypot(dx, dy) || 1
     dx /= d
     dy /= d
@@ -266,6 +279,13 @@ export function mount(container, ctx) {
 
     drawCat(t)
 
+    // the train, drawn in the painting's own pixel space
+    g.save()
+    const k = (v.iw * v.s) / 3840
+    g.setTransform(v.dpr * k, 0, 0, v.dpr * k, v.dpr * v.ox, v.dpr * v.oy)
+    trainView = train.draw(g, t, light)
+    g.restore()
+
     const L = (ctx.reducedMotion ? 1 : lampLevel(now, t)) * light
     glow(X(LAMP.x), Y(LAMP.y), px(520), '255,176,90', 0.13 * L, 'lighter')
     glow(X(LAMP.x), Y(LAMP.y), px(120), '255,214,150', 0.3 * L, 'lighter')
@@ -316,8 +336,17 @@ export function mount(container, ctx) {
     const lx = X(LAMP.x)
     const ly = Y(LAMP.y)
     const lr = px(700)
+    const bm = trainView.beam && {
+      x0: X(trainView.beam.x0 / 3840), y0: Y(trainView.beam.y0 / 2160), x1: X(trainView.beam.x1 / 3840), y1: Y(trainView.beam.y1 / 2160), w: px(trainView.beam.w),
+    }
     for (const d of drops) {
-      const lit = Math.max(0, 1 - Math.hypot(d.x - lx, d.y - ly) / lr)
+      let lit = Math.max(0, 1 - Math.hypot(d.x - lx, d.y - ly) / lr)
+      if (bm) { // raindrops caught in the train's headlamp
+        const ax = bm.x1 - bm.x0, ay = bm.y1 - bm.y0, al = ax * ax + ay * ay || 1
+        const u = Math.max(0, Math.min(1, ((d.x - bm.x0) * ax + (d.y - bm.y0) * ay) / al))
+        const dd = Math.hypot(d.x - bm.x0 - ax * u, d.y - bm.y0 - ay * u)
+        if (dd < bm.w * u + px(30)) lit = Math.max(lit, 0.8 * (1 - u))
+      }
       g.strokeStyle = lit > 0.05 ? `rgba(255,216,160,${(d.a + lit * 0.45) * light})` : `rgba(200,215,240,${d.a})`
       g.lineWidth = d.w
       g.beginPath()
@@ -359,11 +388,18 @@ export function mount(container, ctx) {
     throw new Error('last-train-platform: illustration failed to load')
   }
 
-  // Live wallpaper: the cat wakes and watches the cursor when it comes close.
+  // Live wallpaper: the cat wakes and watches the cursor when it comes close;
+  // the signal or the empty track calls the train, the waiting train whistles and leaves.
   const offPointer = ctx.onPointer?.((e) => {
     ptr.x = e.x
     ptr.y = e.y
     ptr.seen = true
+    if (e.type !== 'down' || !v) return
+    const k = (v.iw * v.s) / 3840
+    const x = (e.x - v.ox) / k
+    const y = (e.y - v.oy) / k
+    if (train.hit(x, y)) train.whistle()
+    else if (Math.hypot(x - SIGNAL.x * 3840, y - SIGNAL.y * 2160) < 220 || (x > 2050 && y > 1240)) train.call()
   })
 
   return {

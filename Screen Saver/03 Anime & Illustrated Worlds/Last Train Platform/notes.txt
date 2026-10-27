@@ -26,3 +26,16 @@ roof drip edge 1000,0 -> 1680,480 · yellow platform edge 1900,1262 -> 2250,2160
 
 Preview test (26 Oct, headless Chromium 1920x1080): no console errors, ~60 fps, eyes open/follow/close verified in screenshots.
 Not done yet: time of day, goodbye moment, library scene, Windows test.
+
+Steam train (added 27 Oct 2026; motion approved as preview v0.3, details as v0.4):
+- one 3D 1800s train (4-4-0 style engine, tender, two maroon coaches with lit windows), drawn live in code (train.js)
+- rails traced in the painting and fitted to a simple camera (horizon y 1235, eye 1.42 m above the rails,
+  focal 3400 px on the 3840x2160 painting) -> a centre-line path in metres; each car rides the path on its two axles
+- comes out of the haze far down the line, follows the curve, stops beside the platform (~14 s, steam + smoke),
+  then rolls on past the camera until the last coach has gone; next train 2-3.5 min later (first ~30 s after start)
+- wheels turn with distance travelled, rods follow the cranks; smoke/steam stay where puffed; headlamp glare,
+  beam through the rain, glints on the wet rails, window and lamp reflections on the wet ground
+- the cat wakes and watches the train's lamp while it is in
+- wallpaper: click the green signal or the tracks = call the train; click the waiting train = whistle and leave
+- earlier tries: v0.1 boxes drawn in code (toy-like), v0.2 a cut-out of a painted train scaled toward you
+  (stretched/faded) - replaced by v0.3 per Hima's written brief
