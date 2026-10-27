@@ -1,0 +1,19 @@
+Tea Hills in Morning Mist — Dreamscapes & Landscapes
+Approved by Hima: idea 27 Oct 2026 (batch 6 #1); wallpaper preview v0.2 approved 27 Oct 2026.
+
+Usage terms: Gamma AI image generation (check Gamma's terms before a public release).
+Earlier versions: v0.1 used an inked, comic-style picture (Gamma) with a crested bird drawn in code;
+Hima asked for the anime film background style and no bird (27 Oct).
+
+Motion (WebGL shader over the picture + a 2D canvas):
+- shade trees sway in slow, uneven gusts (hand-placed crown masks)
+- near tea leaves rustle; mist drifts inside the valley mist; a thin veil moves over the slopes
+- soft sun rays from behind the left ridge
+- time of day from the PC clock: dawn = the painting, day, dusk (warmer), night (blue, stars, lit cottage window)
+- dew glints on the near leaves; now and then a few far-off birds cross the sky (not at night)
+
+Wallpaper interaction (no on-screen instructions):
+- moving over the bushes: leaves rustle around the hand
+- resting on the bushes: dew glints gather around it
+- click: a little burst of dew
+Screensaver mode ignores the interaction.
