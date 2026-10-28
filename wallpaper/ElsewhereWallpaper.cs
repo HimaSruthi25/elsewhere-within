@@ -90,6 +90,7 @@ namespace ElsewhereWallpaper
         readonly System.Windows.Forms.Timer rebuildTimer = new System.Windows.Forms.Timer();
         readonly System.Windows.Forms.Timer settle = new System.Windows.Forms.Timer(); // one update per burst of window events
         readonly WindowEvents winEvents;
+        readonly uint selfPid = (uint)Process.GetCurrentProcess().Id;
         readonly List<WallpaperWindow> windows = new List<WallpaperWindow>();
         readonly DesktopInput input;
         readonly MessageWindow messages;
@@ -125,7 +126,7 @@ namespace ElsewhereWallpaper
             watch.Tick += delegate { UpdateRendering(); input.CheckAlive(); };
             settle.Interval = 150;
             settle.Tick += delegate { settle.Stop(); UpdateRendering(); };
-            winEvents = new WindowEvents(delegate { if (!settle.Enabled) settle.Start(); });
+            winEvents = new WindowEvents(delegate { settle.Stop(); settle.Start(); }); // debounce
 
             BuildWindows();
             watch.Start();
@@ -218,18 +219,38 @@ namespace ElsewhereWallpaper
         {
             batterySaver = Native.BatterySaverOn();
             List<Rectangle> covering = CoveringWindows();
-            bool anyRendering = false;
+            Rectangle? foreground = ForegroundAppRect();
+            bool anyAwake = false;
             foreach (WallpaperWindow w in windows)
             {
                 bool covered = false;
                 foreach (Rectangle r in covering)
                     if (Logic.Covers(r, w.Monitor.Bounds, w.Monitor.WorkingArea)) { covered = true; break; }
-                Logic.RenderMode mode = Logic.DecideMode(userPaused, covered, batterySaver, locked);
-                w.SetMode(mode);
-                anyRendering |= mode == Logic.RenderMode.Run;
+                bool appInFront = foreground.HasValue && Logic.IsOnMonitor(foreground.Value, w.Monitor.Bounds);
+                int sinceTouch = w.MsSinceTouch();
+                w.Covered = covered;
+                Logic.RenderMode mode = Logic.DecideMode(userPaused, covered, batterySaver, locked, appInFront, sinceTouch);
+                w.SetMode(mode, Logic.ModeReason(userPaused, covered, batterySaver, locked, appInFront, sinceTouch));
+                anyAwake |= mode != Logic.RenderMode.Suspend;
             }
-            // While paused, the desktop behaves normally (selection rectangle and all).
-            input.Enabled = anyRendering && !userPaused && !locked;
+            // Frozen scenes still listen: a mouse move on the desktop wakes them. While
+            // paused, the desktop behaves normally (selection rectangle and all).
+            input.Enabled = anyAwake && !userPaused && !locked;
+        }
+
+        // The foreground window's rectangle if it is a normal app window, else null.
+        Rectangle? ForegroundAppRect()
+        {
+            IntPtr h = Native.GetForegroundWindow();
+            if (h == IntPtr.Zero || !Native.IsWindowVisible(h)) return null;
+            uint pid;
+            Native.GetWindowThreadProcessId(h, out pid);
+            long ex = Native.GetWindowLong(h, Native.GWL_EXSTYLE);
+            bool overlay = (ex & (Native.WS_EX_TOOLWINDOW | Native.WS_EX_TRANSPARENT | Native.WS_EX_NOACTIVATE)) != 0;
+            if (!Logic.IsAppWindow(Native.ClassOf(h), Native.IsIconic(h), Native.IsCloaked(h), overlay, pid == selfPid)) return null;
+            Native.RECT r;
+            if (!Native.GetWindowRect(h, out r)) return null;
+            return Rectangle.FromLTRB(r.Left, r.Top, r.Right, r.Bottom);
         }
 
         // Rectangles of visible, normal top-level windows (not the desktop's own).
@@ -269,6 +290,10 @@ namespace ElsewhereWallpaper
             foreach (WallpaperWindow w in windows)
             {
                 if (!w.Monitor.Bounds.Contains(screenPoint)) continue;
+                w.Touch();
+                // Wake a frozen scene at once, without waiting for the next check
+                // (UpdateRendering agrees: touched within 10 s means run).
+                if (w.Mode == Logic.RenderMode.Freeze && !w.Covered) w.SetMode(Logic.RenderMode.Run, "mouse touched the desktop");
                 w.Post(Logic.PointerMessage(type, screenPoint, w.Monitor.Bounds));
                 return;
             }
@@ -433,6 +458,9 @@ namespace ElsewhereWallpaper
         string pendingUrl;
         Logic.RenderMode wantMode = Logic.RenderMode.Run;
         Logic.RenderMode mode = Logic.RenderMode.Run;
+        string wantWhy = "";
+        bool touched;
+        int touchTick;
         bool disposed;
 
         public bool IsCreated { get { return IsHandleCreated; } }
@@ -505,10 +533,28 @@ namespace ElsewhereWallpaper
         // Run = animating. Freeze = visible, but the page holds its frames (the covered
         // desktop; uncovering it shows the scene at once). Suspend = hidden and
         // suspended: no drawing, no timers worth mentioning.
-        public void SetMode(Logic.RenderMode newMode)
+        public void SetMode(Logic.RenderMode newMode, string why)
         {
             wantMode = newMode;
+            wantWhy = why;
             ApplyMode();
+        }
+
+        public Logic.RenderMode Mode { get { return mode; } }
+
+        // Set by the tray app: a window covers this monitor, so no mouse move can wake it.
+        public bool Covered;
+
+        // A mouse move reached this monitor's scene.
+        public void Touch()
+        {
+            touchTick = Environment.TickCount;
+            touched = true;
+        }
+
+        public int MsSinceTouch()
+        {
+            return touched ? Math.Max(0, unchecked(Environment.TickCount - touchTick)) : Logic.NeverTouched;
         }
 
         // The page just loaded (or reloaded): tell it where we are.
@@ -527,7 +573,7 @@ namespace ElsewhereWallpaper
                 if (mode == Logic.RenderMode.Suspend)
                 {
                     webView.Visible = false;
-                    Log.Write("paused " + Monitor.DeviceName);
+                    Log.Write("paused " + Monitor.DeviceName + ": " + wantWhy);
                     await webView.CoreWebView2.TrySuspendAsync();
                     return;
                 }
@@ -535,9 +581,9 @@ namespace ElsewhereWallpaper
                 {
                     webView.CoreWebView2.Resume();
                     webView.Visible = true;
-                    Log.Write("resumed " + Monitor.DeviceName);
+                    Log.Write("resumed " + Monitor.DeviceName + ": " + wantWhy);
                 }
-                else Log.Write((mode == Logic.RenderMode.Freeze ? "frozen " : "unfrozen ") + Monitor.DeviceName);
+                else Log.Write((mode == Logic.RenderMode.Freeze ? "frozen " : "unfrozen ") + Monitor.DeviceName + ": " + wantWhy);
                 PostRaw(Logic.FreezeMessage(mode == Logic.RenderMode.Freeze));
             }
             catch (Exception e)
@@ -649,8 +695,8 @@ namespace ElsewhereWallpaper
     // ---------- window events ----------
 
     // Tells the tray app at once when the foreground window changes, a window is
-    // minimised or restored, or a top-level window moves or resizes (Win+D, maximise,
-    // snap), so it does not wait for the 1.5 s timer. Callbacks arrive on the UI thread.
+    // minimised or restored (Win+D, alt-tab, clicking the desktop), so it does not wait
+    // for the 1.5 s timer. Callbacks arrive on the UI thread.
     class WindowEvents : IDisposable
     {
         readonly Native.WinEventProc proc; // kept so the garbage collector cannot free it
@@ -663,7 +709,6 @@ namespace ElsewhereWallpaper
             proc = OnEvent;
             Hook(Native.EVENT_SYSTEM_FOREGROUND, Native.EVENT_SYSTEM_FOREGROUND);
             Hook(Native.EVENT_SYSTEM_MINIMIZESTART, Native.EVENT_SYSTEM_MINIMIZEEND);
-            Hook(Native.EVENT_OBJECT_LOCATIONCHANGE, Native.EVENT_OBJECT_LOCATIONCHANGE);
         }
 
         void Hook(uint min, uint max)
@@ -1029,7 +1074,7 @@ namespace ElsewhereWallpaper
         public const uint MEM_COMMIT = 0x1000, MEM_RESERVE = 0x2000, MEM_RELEASE = 0x8000, PAGE_READWRITE = 4;
         public const uint SPI_SETDESKWALLPAPER = 0x14, SPIF_SENDCHANGE = 2;
         const int DWMWA_CLOAKED = 14;
-        public const uint EVENT_SYSTEM_FOREGROUND = 0x3, EVENT_SYSTEM_MINIMIZESTART = 0x16, EVENT_SYSTEM_MINIMIZEEND = 0x17, EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
+        public const uint EVENT_SYSTEM_FOREGROUND = 0x3, EVENT_SYSTEM_MINIMIZESTART = 0x16, EVENT_SYSTEM_MINIMIZEEND = 0x17;
         public const uint WINEVENT_OUTOFCONTEXT = 0, WINEVENT_SKIPOWNPROCESS = 2;
         public const uint GA_ROOT = 2;
 
@@ -1064,6 +1109,7 @@ namespace ElsewhereWallpaper
 
         [DllImport("user32.dll")] public static extern IntPtr SetWinEventHook(uint min, uint max, IntPtr module, WinEventProc proc, uint pid, uint thread, uint flags);
         [DllImport("user32.dll")] public static extern bool UnhookWinEvent(IntPtr hook);
+        [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll")] public static extern IntPtr GetAncestor(IntPtr hWnd, uint flags);
 
         [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();

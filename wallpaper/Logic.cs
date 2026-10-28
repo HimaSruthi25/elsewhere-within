@@ -63,10 +63,42 @@ namespace ElsewhereWallpaper
         // Suspend: hidden and suspended; resuming takes a moment, so only for long pauses.
         public enum RenderMode { Run, Freeze, Suspend }
 
-        public static RenderMode DecideMode(bool userPaused, bool covered, bool batterySaver, bool locked)
+        // A mouse move that reaches the scene wakes a frozen monitor for this long.
+        public const int TouchWakeMs = 10000;
+        public const int NeverTouched = int.MaxValue;
+
+        // Suspend for lock, Battery Saver and the user's pause. Otherwise freeze when a
+        // window covers the monitor, or when an app window is in front on it, unless the
+        // mouse touched the desktop within TouchWakeMs (then it runs until the mouse rests).
+        public static RenderMode DecideMode(bool userPaused, bool covered, bool batterySaver, bool locked, bool appInFront, int msSinceTouch)
         {
             if (userPaused || batterySaver || locked) return RenderMode.Suspend;
-            return covered ? RenderMode.Freeze : RenderMode.Run;
+            if (covered) return RenderMode.Freeze;
+            if (appInFront && msSinceTouch >= TouchWakeMs) return RenderMode.Freeze;
+            return RenderMode.Run;
+        }
+
+        // The reason behind DecideMode's answer, for the log.
+        public static string ModeReason(bool userPaused, bool covered, bool batterySaver, bool locked, bool appInFront, int msSinceTouch)
+        {
+            if (userPaused) return "paused by the user";
+            if (locked) return "screen locked";
+            if (batterySaver) return "Battery Saver";
+            if (covered) return "a window covers the monitor";
+            if (appInFront) return msSinceTouch < TouchWakeMs ? "mouse touched the desktop" : "an app is in front and the mouse is still";
+            return "the desktop is in front";
+        }
+
+        // Is this foreground window a normal app window, one that should freeze the scene?
+        public static bool IsAppWindow(string className, bool minimized, bool cloaked, bool overlay, bool ownProcess)
+        {
+            return !minimized && !cloaked && !overlay && !ownProcess && !IsShellClass(className);
+        }
+
+        // Which monitor a window is on: the one holding its centre.
+        public static bool IsOnMonitor(Rectangle window, Rectangle monitor)
+        {
+            return monitor.Contains(window.Left + window.Width / 2, window.Top + window.Height / 2);
         }
 
         // Sent to the page; library\core\wallpaper.js parseFreezeMessage reads them.

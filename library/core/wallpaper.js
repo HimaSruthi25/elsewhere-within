@@ -13,7 +13,8 @@ export function parsePointerMessage(message, dpr = 1) {
 }
 
 // "freeze" -> true, "unfreeze" -> false; anything else -> null. The host sends these
-// while a window covers the desktop: the page stays visible but stops animating.
+// while an app is in front or covers the desktop: the page stays visible, with its
+// last frame, but stops animating.
 export function parseFreezeMessage(message) {
   if (message === 'freeze') return true
   if (message === 'unfreeze') return false

@@ -38,14 +38,48 @@ static class LogicTests
         Check(Logic.IsDesktopSurface("SHELLDLL_DefView") && Logic.IsDesktopSurface("Progman") && Logic.IsDesktopSurface("WorkerW"), "desktop surfaces");
         Check(!Logic.IsDesktopSurface("Shell_TrayWnd") && !Logic.IsDesktopSurface("SysListView32"), "taskbar and icon list are not bare surfaces");
 
-        // Render decision: covered alone freezes; any other reason suspends.
-        Check(Logic.DecideMode(false, false, false, false) == Logic.RenderMode.Run, "runs when nothing stops it");
-        Check(Logic.DecideMode(false, true, false, false) == Logic.RenderMode.Freeze, "covered only: freeze, not hide");
-        Check(Logic.DecideMode(true, false, false, false) == Logic.RenderMode.Suspend, "user pause suspends");
-        Check(Logic.DecideMode(false, false, true, false) == Logic.RenderMode.Suspend, "battery saver suspends");
-        Check(Logic.DecideMode(false, false, false, true) == Logic.RenderMode.Suspend, "locked suspends");
-        Check(Logic.DecideMode(true, true, false, false) == Logic.RenderMode.Suspend, "paused and covered suspends");
-        Check(Logic.DecideMode(false, true, true, true) == Logic.RenderMode.Suspend, "covered and locked suspends");
+        // Render decision. Args: userPaused, covered, batterySaver, locked, appInFront, msSinceTouch.
+        const int Never = Logic.NeverTouched;
+        Check(Logic.DecideMode(false, false, false, false, false, Never) == Logic.RenderMode.Run, "runs when nothing stops it");
+        Check(Logic.DecideMode(false, true, false, false, false, Never) == Logic.RenderMode.Freeze, "covered only: freeze, not hide");
+        Check(Logic.DecideMode(true, false, false, false, false, Never) == Logic.RenderMode.Suspend, "user pause suspends");
+        Check(Logic.DecideMode(false, false, true, false, false, Never) == Logic.RenderMode.Suspend, "battery saver suspends");
+        Check(Logic.DecideMode(false, false, false, true, false, Never) == Logic.RenderMode.Suspend, "locked suspends");
+        Check(Logic.DecideMode(true, true, false, false, true, Never) == Logic.RenderMode.Suspend, "paused and covered suspends");
+        Check(Logic.DecideMode(false, true, true, true, true, 0) == Logic.RenderMode.Suspend, "covered and locked suspends");
+        Check(Logic.DecideMode(false, false, true, false, true, 0) == Logic.RenderMode.Suspend, "battery saver suspends even right after a touch");
+        // The new rule: an app window in front freezes the monitor.
+        Check(Logic.DecideMode(false, false, false, false, true, Never) == Logic.RenderMode.Freeze, "app in front, never touched: freeze");
+        Check(Logic.DecideMode(false, false, false, false, true, 5000) == Logic.RenderMode.Run, "app in front, mouse touched 5 s ago: run");
+        Check(Logic.DecideMode(false, false, false, false, true, 0) == Logic.RenderMode.Run, "app in front, touched just now: run");
+        Check(Logic.DecideMode(false, false, false, false, true, Logic.TouchWakeMs - 1) == Logic.RenderMode.Run, "just under 10 s: still running");
+        Check(Logic.DecideMode(false, false, false, false, true, Logic.TouchWakeMs) == Logic.RenderMode.Freeze, "10 s without a move: freeze again");
+        Check(Logic.DecideMode(false, true, false, false, true, 0) == Logic.RenderMode.Freeze, "a covering window freezes even if the mouse just moved");
+        Check(Logic.DecideMode(false, false, false, false, false, Logic.TouchWakeMs + 1) == Logic.RenderMode.Run, "desktop in front runs however long the mouse rests");
+        // Reasons for the log.
+        Check(Logic.ModeReason(true, true, true, true, true, 0) == "paused by the user", "reason: user pause wins");
+        Check(Logic.ModeReason(false, true, true, true, true, 0) == "screen locked", "reason: locked");
+        Check(Logic.ModeReason(false, true, true, false, true, 0) == "Battery Saver", "reason: battery saver");
+        Check(Logic.ModeReason(false, true, false, false, true, 0) == "a window covers the monitor", "reason: covered");
+        Check(Logic.ModeReason(false, false, false, false, true, 0) == "mouse touched the desktop", "reason: touched");
+        Check(Logic.ModeReason(false, false, false, false, true, Never) == "an app is in front and the mouse is still", "reason: app in front");
+        Check(Logic.ModeReason(false, false, false, false, false, Never) == "the desktop is in front", "reason: desktop in front");
+        // Which foreground windows count as an app window.
+        Check(Logic.IsAppWindow("Chrome_WidgetWin_1", false, false, false, false), "a browser is an app window");
+        Check(!Logic.IsAppWindow("Chrome_WidgetWin_1", true, false, false, false), "minimised is not");
+        Check(!Logic.IsAppWindow("Chrome_WidgetWin_1", false, true, false, false), "cloaked is not");
+        Check(!Logic.IsAppWindow("Chrome_WidgetWin_1", false, false, true, false), "an overlay (tool window) is not");
+        Check(!Logic.IsAppWindow("Chrome_WidgetWin_1", false, false, false, true), "our own window is not");
+        foreach (string c in new string[] { "Progman", "WorkerW", "SHELLDLL_DefView", "Shell_TrayWnd", "Shell_SecondaryTrayWnd" })
+            Check(!Logic.IsAppWindow(c, false, false, false, false), c + " is the shell, not an app");
+        // Which monitor a window is on.
+        var left = new Rectangle(0, 0, 1920, 1080);
+        var right = new Rectangle(1920, 0, 1920, 1080);
+        Check(Logic.IsOnMonitor(new Rectangle(100, 100, 800, 600), left) && !Logic.IsOnMonitor(new Rectangle(100, 100, 800, 600), right), "a window on the left monitor");
+        Check(Logic.IsOnMonitor(new Rectangle(2000, 50, 800, 600), right) && !Logic.IsOnMonitor(new Rectangle(2000, 50, 800, 600), left), "a window on the right monitor");
+        Check(Logic.IsOnMonitor(new Rectangle(1700, 100, 800, 600), right) && !Logic.IsOnMonitor(new Rectangle(1700, 100, 800, 600), left), "a straddling window belongs to the monitor with its centre (right)");
+        Check(Logic.IsOnMonitor(new Rectangle(1500, 100, 800, 600), left) && !Logic.IsOnMonitor(new Rectangle(1500, 100, 800, 600), right), "a straddling window belongs to the monitor with its centre (left)");
+        Check(Logic.IsOnMonitor(new Rectangle(-8, -8, 1936, 1056), left), "a maximised window with an invisible border");
         Check(Logic.FreezeMessage(true) == "freeze" && Logic.FreezeMessage(false) == "unfreeze", "freeze messages");
         Check(Logic.IsWindowEvent(0, 0), "a window event");
         Check(!Logic.IsWindowEvent(-8, 0) && !Logic.IsWindowEvent(0, 3), "caret or child object events are not window events");
