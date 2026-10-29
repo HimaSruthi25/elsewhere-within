@@ -1,0 +1,6 @@
+Ginkgo Courtyard (living world) — Seasons & Special Moments
+Approved by Hima 29 Oct 2026 (preview v0.2: wagtail removed, stone lantern redrawn after her 3 reference photos).
+No pictures: courtyard, lantern and leaves are drawn and animated live in code (library/scenes/ginkgo-courtyard/scene.js, WebGL2).
+Lives: ~950 ginkgo leaves fall, land, slide in gusts; small whirls; swaying dappled shade; lantern windows glow at dusk/night, moths.
+Touch (wallpaper): move = wind; rest still = leaves gather into a ring around the hand; click = puff + whirl.
+Preview Artifact: 3QjE4uLjPVNGQpi46UjyXV. Checked headless only; not yet seen on Windows; GPU cost on the laptop unchecked.
