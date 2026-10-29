@@ -1,0 +1,4 @@
+Houseboat Morning (Cozy Spaces). Approved by Hima 29 Oct 2026 (preview v0.2).
+Code: wind waves + ripple rings on the water, ceiling water-light (stirred by the hand), palms sway, mist, pot steam, lamp glow, heron; dawn/day/dusk/night.
+Touch: move over the water. Masks: houseboat-morning-mask.png (R water, G ceiling, B window), houseboat-morning-trees.png.
+Checked headless only; not yet seen on Windows.
