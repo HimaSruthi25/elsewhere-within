@@ -34,6 +34,10 @@ namespace ElsewhereWallpaper
     {
         public const string Title = "Elsewhere, Within live wallpaper";
 
+        // "ElsewhereWallpaper.exe /quit" asks a running copy to quit as if Quit was chosen in
+        // the tray (deploy.ps1 uses it, so it never has to force-stop the process).
+        public const string QuitEventName = @"Local\ElsewhereWithinWallpaperQuit";
+
         public static string AppDir { get { return AppDomain.CurrentDomain.BaseDirectory; } }
         public static string SiteDir { get { return Path.Combine(AppDir, "site"); } }
         public static string DataDir
@@ -44,6 +48,12 @@ namespace ElsewhereWallpaper
         [STAThread]
         static int Main(string[] args)
         {
+            if (args.Length > 0 && args[0].Equals("/quit", StringComparison.OrdinalIgnoreCase))
+            {
+                EventWaitHandle quit;
+                if (EventWaitHandle.TryOpenExisting(QuitEventName, out quit)) { using (quit) quit.Set(); return 0; }
+                return 1; // not running
+            }
             bool created;
             using (var single = new Mutex(true, @"Local\ElsewhereWithinWallpaper", out created))
             {
@@ -94,9 +104,12 @@ namespace ElsewhereWallpaper
         readonly List<WallpaperWindow> windows = new List<WallpaperWindow>();
         readonly DesktopInput input;
         readonly MessageWindow messages;
+        readonly EventWaitHandle quitRequest;
+        readonly System.Windows.Forms.Timer quitWatch = new System.Windows.Forms.Timer();
         string sceneId;
         string builtLayout;
         bool userPaused;
+        bool handControl; // camera switch in the tray menu; off unless the user ticks it
         bool locked;
         bool batterySaver;
 
@@ -108,6 +121,7 @@ namespace ElsewhereWallpaper
             scenes = Logic.ParseScenes(json, out defaultScene);
             sceneId = Logic.PickScene(Settings.GetString("Scene"), scenes, defaultScene);
             userPaused = Settings.GetInt("Paused") == 1;
+            handControl = Settings.GetInt("HandControl") == 1;
 
             tray.Icon = TrayIcon.Create();
             tray.ContextMenuStrip = menu;
@@ -127,6 +141,18 @@ namespace ElsewhereWallpaper
             settle.Interval = 150;
             settle.Tick += delegate { settle.Stop(); UpdateRendering(); };
             winEvents = new WindowEvents(delegate { settle.Stop(); settle.Start(); }); // debounce
+
+            // Anyone in this session may ask us to quit (deploy.ps1, even from another elevation).
+            var security = new System.Security.AccessControl.EventWaitHandleSecurity();
+            security.AddAccessRule(new System.Security.AccessControl.EventWaitHandleAccessRule(
+                new System.Security.Principal.SecurityIdentifier(System.Security.Principal.WellKnownSidType.AuthenticatedUserSid, null),
+                System.Security.AccessControl.EventWaitHandleRights.Synchronize | System.Security.AccessControl.EventWaitHandleRights.Modify,
+                System.Security.AccessControl.AccessControlType.Allow));
+            bool createdNew;
+            quitRequest = new EventWaitHandle(false, EventResetMode.ManualReset, Program.QuitEventName, out createdNew, security);
+            quitWatch.Interval = 400;
+            quitWatch.Tick += delegate { if (quitRequest.WaitOne(0)) { Log.Write("quit requested (/quit)"); Quit(); } };
+            quitWatch.Start();
 
             BuildWindows();
             watch.Start();
@@ -165,6 +191,7 @@ namespace ElsewhereWallpaper
             foreach (Screen screen in Screen.AllScreens)
             {
                 var w = new WallpaperWindow(screen);
+                w.CameraAllowed = handControl && screen.Primary;
                 w.Attach(attach);
                 w.Start(Logic.SceneUrl(sceneId));
                 windows.Add(w);
@@ -335,10 +362,24 @@ namespace ElsewhereWallpaper
             autostart.Click += delegate { SetStartsWithWindows(!StartsWithWindows()); };
             menu.Items.Add(autostart);
 
+            var hands = new ToolStripMenuItem("Hand control (camera)");
+            hands.Checked = handControl;
+            hands.ToolTipText = "Wave at the camera to move the scene. Nothing is recorded, saved or sent.";
+            hands.Click += delegate { SetHandControl(!handControl); };
+            menu.Items.Add(hands);
+
             menu.Items.Add(new ToolStripSeparator());
             var quit = new ToolStripMenuItem("Quit (restores your wallpaper)");
             quit.Click += delegate { Quit(); };
             menu.Items.Add(quit);
+        }
+
+        void SetHandControl(bool on)
+        {
+            handControl = on;
+            Settings.SetInt("HandControl", on ? 1 : 0);
+            Log.Write("hand control (camera): " + (on ? "on" : "off"));
+            foreach (WallpaperWindow w in windows) w.SetCamera(on && w.Monitor.Primary);
         }
 
         void ChangeScene(string id)
@@ -375,6 +416,8 @@ namespace ElsewhereWallpaper
         void Quit()
         {
             Log.Write("quit");
+            quitWatch.Stop();
+            quitRequest.Dispose();
             watch.Stop();
             settle.Stop();
             winEvents.Dispose();
@@ -542,6 +585,15 @@ namespace ElsewhereWallpaper
 
         public Logic.RenderMode Mode { get { return mode; } }
 
+        // Hand control: the page may use the camera (tray switch on, primary monitor only).
+        public bool CameraAllowed;
+
+        public void SetCamera(bool allowed)
+        {
+            CameraAllowed = allowed;
+            PostRaw(Logic.CameraMessage(allowed));
+        }
+
         // Set by the tray app: a window covers this monitor, so no mouse move can wake it.
         public bool Covered;
 
@@ -561,11 +613,14 @@ namespace ElsewhereWallpaper
         public void RepeatFreezeState()
         {
             if (mode != Logic.RenderMode.Run) PostRaw(Logic.FreezeMessage(mode == Logic.RenderMode.Freeze));
+            if (CameraAllowed) PostRaw(Logic.CameraMessage(true));
         }
 
         async void ApplyMode()
         {
             if (disposed || webView == null || webView.CoreWebView2 == null || mode == wantMode) return;
+            // The camera goes off before a page is suspended (the freeze message turns it off too).
+            if (wantMode != Logic.RenderMode.Run) PostRaw(Logic.FreezeMessage(true));
             Logic.RenderMode previous = mode;
             mode = wantMode;
             try
@@ -660,6 +715,12 @@ namespace ElsewhereWallpaper
             core.NewWindowRequested += (sender, e) => { e.Handled = true; };
             core.PermissionRequested += (sender, e) =>
             {
+                if (Logic.AllowCamera(e.PermissionKind == CoreWebView2PermissionKind.Camera, CameraAllowed, true))
+                {
+                    e.State = CoreWebView2PermissionState.Allow;
+                    Log.Write("allowed camera (hand control on)");
+                    return;
+                }
                 e.State = CoreWebView2PermissionState.Deny;
                 Log.Write("denied permission: " + e.PermissionKind);
             };

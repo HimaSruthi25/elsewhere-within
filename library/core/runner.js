@@ -4,7 +4,8 @@ import { watchInput } from './input.js'
 import { scenes, resolveSceneId } from './registry.js'
 import { showFallback } from './fallback.js'
 import { createGoodbye } from './goodbye.js'
-import { createFreezeGate, limitFrameRate, parseFreezeMessage, parsePointerMessage } from './wallpaper.js'
+import { createFreezeGate, limitFrameRate, parseCameraMessage, parseFreezeMessage, parsePointerMessage } from './wallpaper.js'
+import { createHandCamera } from './camera.js'
 
 const STATUS_DELAY_MS = 5000
 const REVEAL_TIMEOUT_MS = 2000
@@ -22,6 +23,15 @@ export async function runScene(container, { search = window.location.search, reg
   // host forwards mouse input on the bare desktop as "pointer ..." messages.
   const wallpaper = params.get('mode') === 'wallpaper'
   const pointerListeners = new Set()
+  const waveListeners = new Set()
+  let camera = null
+  let cameraFrozen = false
+  let cameraWanted = false // tray switch "Hand control (camera)" (host message)
+  const syncCamera = () => {
+    const on = cameraWanted && waveListeners.size > 0
+    if (on && !camera) { camera = createHandCamera({ emit: (e) => waveListeners.forEach((fn) => fn(e)), log: (m) => host(m) }); camera.setFrozen(cameraFrozen) }
+    camera?.setEnabled(on)
+  }
   let stopInput = () => {}
   let stopHostMessages = () => {}
   let unlimit = () => {}
@@ -34,6 +44,14 @@ export async function runScene(container, { search = window.location.search, reg
       if (freeze !== null) {
         if (freeze) gate.freeze()
         else gate.unfreeze()
+        cameraFrozen = freeze
+        camera?.setFrozen(freeze)
+        return
+      }
+      const cam = parseCameraMessage(message)
+      if (cam !== null) {
+        cameraWanted = cam
+        syncCamera()
         return
       }
       // The host sends physical pixels; the page works in CSS pixels.
@@ -81,6 +99,9 @@ export async function runScene(container, { search = window.location.search, reg
       mode: wallpaper ? 'wallpaper' : 'screensaver',
       // Wallpaper only: fn({ type: 'move'|'down'|'up', x, y }) for mouse input on the bare desktop. Returns an unsubscribe.
       onPointer(fn) { pointerListeners.add(fn); return () => pointerListeners.delete(fn) },
+      // Wallpaper + tray switch "Hand control (camera)" only: fn({ cells: [{ x, y, vx, vy, e }] })
+      // with the moving parts of the camera picture (CSS px, px/s, strength 0..1), ~15×/s.
+      onWave(fn) { waveListeners.add(fn); syncCamera(); return () => { waveListeners.delete(fn); syncCamera() } },
       subscribe: clock.subscribe,
       ready: reveal,
     }
@@ -106,9 +127,10 @@ export async function runScene(container, { search = window.location.search, reg
       window.removeEventListener('error', onError)
       stopInput()
       stopHostMessages()
+      camera?.stop()
       unlimit()
       clock.stop()
       try { unmount?.() } catch { /* shutting down */ }
     },
   }
-}
+}

@@ -107,6 +107,18 @@ namespace ElsewhereWallpaper
             return freeze ? "freeze" : "unfreeze";
         }
 
+        // Hand control (camera), sent to the page; library\core\wallpaper.js parseCameraMessage reads them.
+        public static string CameraMessage(bool on)
+        {
+            return on ? "camera on" : "camera off";
+        }
+
+        // Only the camera, only while the tray switch is on, only on one monitor's page.
+        public static bool AllowCamera(bool isCameraRequest, bool switchOn, bool isPrimaryWindow)
+        {
+            return isCameraRequest && switchOn && isPrimaryWindow;
+        }
+
         // WinEvent callbacks about a window itself (not a caret, a menu or a child object).
         public const int ObjIdWindow = 0, ChildIdSelf = 0;
         public static bool IsWindowEvent(int idObject, int idChild)
@@ -161,4 +173,4 @@ namespace ElsewhereWallpaper
             return scenes.Count > 0 ? scenes[0].Id : null;
         }
     }
-}
+}

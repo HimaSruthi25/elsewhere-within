@@ -38,6 +38,12 @@ $oldIsSelected = $selected -and (Test-Path $oldScr) -and (ShortPath $selected) -
 
 # A running screensaver or live wallpaper holds its files open. The wallpaper is started again afterwards.
 $wallpaperRunning = @(Get-Process ElsewhereWallpaper -ErrorAction SilentlyContinue).Count -gt 0
+# Ask the wallpaper to quit by itself first (it may run with other rights than this window).
+if ($wallpaperRunning) {
+  $exe = Join-Path $target 'ElsewhereWallpaper.exe'
+  if (Test-Path $exe) { & $exe /quit | Out-Null }
+  for ($i = 0; $i -lt 25 -and @(Get-Process ElsewhereWallpaper -ErrorAction SilentlyContinue).Count -gt 0; $i++) { Start-Sleep -Milliseconds 200 }
+}
 Get-Process | Where-Object { $_.Name -eq 'ElsewhereWithin' -or $_.Name -eq 'ElsewhereWallpaper' -or $_.Name -eq 'ElsewhereUpdate' -or $_.Name -like 'Elsewhere - *' } | Stop-Process -Force
 Start-Sleep -Milliseconds 700
 
@@ -67,4 +73,4 @@ $taskExists = [bool](Get-ScheduledTask -TaskName 'ElsewhereWithin Update' -Error
 if (-not $taskExists -and (Test-Path (Join-Path $target 'ElsewhereUpdate.exe'))) { & (Join-Path $target 'ElsewhereUpdate.exe') /register; Start-Sleep -Seconds 2 }
 # The live wallpaper is copied with everything else (the installer makes it optional). Start it again if it was running.
 if ($wallpaperRunning) { Start-Process (Join-Path $target 'ElsewhereWallpaper.exe') }
-Write-Host ("Deployed {0} scene(s) to {1}; the selected screensaver was not changed." -f $newScr.Count, $target)
+Write-Host ("Deployed {0} scene(s) to {1}; the selected screensaver was not changed." -f $newScr.Count, $target)

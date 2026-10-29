@@ -8,6 +8,7 @@
 // Follows the PC clock: dawn, day, dusk, night (lantern lit, moths circle it).
 // Live wallpaper: move = your hand is wind; rest still = leaves slowly gather into a ring
 // around your hand; click = a puff that throws the leaves up in a small whirl.
+// Hand control (tray switch, camera): waving your real hand blows the leaves where it moves.
 // With reducedMotion one still frame is drawn (redrawn when the time of day changes).
 
 const LIGHTS = {
@@ -690,6 +691,20 @@ export function mount(container, ctx) {
   requestAnimationFrame(() => requestAnimationFrame(() => ctx.ready()))
   const offClock = ctx.subscribe?.(({ timeOfDay }) => { target = LIGHTS[timeOfDay] || LIGHTS.day; if (ctx.reducedMotion) { easeLight(1); render() } })
   const offPointer = ctx.onPointer?.(onPointer)
+  // Hand control (camera, wallpaper only): a waving hand is wind where it moves, plus a
+  // small outward push like a hand pushing air.
+  const offWave = ctx.onWave?.(({ cells }) => {
+    if (ctx.reducedMotion || !W) return
+    const cap = 1500 * S
+    for (const c of cells) {
+      const ox = c.x - c.bx, oy = c.y - c.by, ol = Math.hypot(ox, oy) || 1
+      let vx = c.vx * 1.1 + (ox / ol) * 140 * S * c.e, vy = c.vy * 1.1 + (oy / ol) * 140 * S * c.e
+      const sp = Math.hypot(vx, vy)
+      if (sp > cap) { vx *= cap / sp; vy *= cap / sp }
+      const k = 0.4 + 0.6 * c.e
+      splat(c.x, c.y, vx * k, vy * k, 120 * S)
+    }
+  })
   let rz = 0
   const onResize = () => { clearTimeout(rz); rz = setTimeout(() => { layout(); render() }, 150) }
   addEventListener('resize', onResize)
@@ -700,6 +715,7 @@ export function mount(container, ctx) {
       clearTimeout(rz)
       removeEventListener('resize', onResize)
       offPointer?.()
+      offWave?.()
       offClock?.()
       gl.getExtension('WEBGL_lose_context')?.loseContext()
       container.replaceChildren()

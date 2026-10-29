@@ -21,6 +21,14 @@ export function parseFreezeMessage(message) {
   return null
 }
 
+// "camera on" -> true, "camera off" -> false; anything else -> null. The host sends
+// these when the tray switch "Hand control (camera)" changes (primary monitor only).
+export function parseCameraMessage(message) {
+  if (message === 'camera on') return true
+  if (message === 'camera off') return false
+  return null
+}
+
 // While frozen, requestAnimationFrame callbacks are held instead of run, so the
 // frame loop (and the CPU use) stops; unfreeze runs them again. Held ids are
 // negative so they never clash with real ones. Returns { freeze, unfreeze, restore }.
@@ -106,4 +114,4 @@ export function limitFrameRate(target, fps = WALLPAPER_FPS) {
     target.requestAnimationFrame = original.raf
     target.cancelAnimationFrame = original.caf
   }
-}
+}

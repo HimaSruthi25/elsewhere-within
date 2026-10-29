@@ -81,6 +81,11 @@ static class LogicTests
         Check(Logic.IsOnMonitor(new Rectangle(1500, 100, 800, 600), left) && !Logic.IsOnMonitor(new Rectangle(1500, 100, 800, 600), right), "a straddling window belongs to the monitor with its centre (left)");
         Check(Logic.IsOnMonitor(new Rectangle(-8, -8, 1936, 1056), left), "a maximised window with an invisible border");
         Check(Logic.FreezeMessage(true) == "freeze" && Logic.FreezeMessage(false) == "unfreeze", "freeze messages");
+        Check(Logic.CameraMessage(true) == "camera on" && Logic.CameraMessage(false) == "camera off", "camera messages");
+        Check(Logic.AllowCamera(true, true, true), "camera allowed: switch on, primary monitor");
+        Check(!Logic.AllowCamera(true, false, true), "camera denied while the switch is off");
+        Check(!Logic.AllowCamera(true, true, false), "camera denied on other monitors");
+        Check(!Logic.AllowCamera(false, true, true), "other permissions (microphone, location...) stay denied");
         Check(Logic.IsWindowEvent(0, 0), "a window event");
         Check(!Logic.IsWindowEvent(-8, 0) && !Logic.IsWindowEvent(0, 3), "caret or child object events are not window events");
 
@@ -120,4 +125,4 @@ static class LogicTests
         Console.WriteLine(checks + " checks, " + failures + " failed");
         return failures == 0 ? 0 : 1;
     }
-}
+}
