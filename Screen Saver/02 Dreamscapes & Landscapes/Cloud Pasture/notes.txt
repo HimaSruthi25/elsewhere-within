@@ -1,0 +1,9 @@
+Cloud Pasture (living world) — Dreamscapes & Landscapes
+Approved by Hima 31 Oct 2026 (preview v0.5 + farmyard fix).
+No pictures: countryside, clouds, crops, sheep, farmer and seasons are drawn and animated live in code (library/scenes/cloud-pasture/scene.js, canvas 2D).
+Lives: patchwork fields from high above; clouds drift with their shadows; sheep graze; passing showers; birds; chimney smoke; river glints.
+Crops: every crop field lives its own year (~9 min): plough, sow, sprout, grow, ripen, combine harvest, bales, plough again.
+Seasons: one season per day in turn (spring, summer, autumn, winter), by the PC date; winter = snow, bare trees, snowfall.
+Touch (wallpaper): move = wind (pushes and tears clouds, sheep shy away); rest on a crop field = that field races through its year; click a cloud = shower (snow in winter); click open sky = a new little cloud.
+Hand control (camera, tray switch): wave hello = sheep look up, the farmer comes out and waves back; sprinkle (wiggle fingers in one spot) = hay falls there and the sheep come to eat.
+Preview Artifact: 7ky6B2fcxXVYdC6PHEvvrv. Checked headless only; not yet seen on Windows; CPU/GPU cost on the laptop unchecked.
