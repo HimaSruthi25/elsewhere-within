@@ -1,0 +1,20 @@
+Hillside Cable Car - Pixel Art & Retro Worlds (library scene: hillside-cable-car)
+Idea batch 11 (31 Oct 2026), approved by Hima 31 Oct (preview v0.1, Artifact SX4M4kTManapqn4pJ2Bfa7).
+
+What moves
+- The two painted cabins were cut out of the picture (background filled, cables redrawn) and travel the real cables as a pair: one goes up while the other comes down, they pass midway, wait ~7 s inside the stations (hidden behind cut-outs of the station buildings), then go back. 52 s per trip with gentle speed-up / slow-down; they swing a little on their hangers when starting, braking and in the wind.
+- Lilac pixel-cloud wisps drift slowly through the valley behind the tower (640x360 grid, masked by hcc-cloud-mask.png).
+- Red lamps on the towers and the upper station glow on and off slowly (3.2 s, never a flash).
+- ~500 window and lamp glows shimmer; every 8-18 s one window fades dark or lights up again.
+- Stars twinkle; more stars at night.
+- Time of day (PC clock): dawn a little cooler, day and dusk = the picture (the scene stays at evening), night = deep blue with the lights restored and the cabin lights on. Changes ease in over ~20 s.
+
+Live wallpaper (hover only)
+- Move the cursor over a cabin: its windows glow warm with a soft halo and it sways a little on the cable.
+
+Files (library/scenes/hillside-cable-car/)
+- scene.js, meta.js, points.js (lamps, light blobs, stars found in the picture)
+- hillside-cable-car.jpg (1920x1080, cabins removed), hcc-cab0/1.png (cabin sprites), hcc-cab0/1-win.png (window glow), hcc-lights.png (lit windows, restored at night), hcc-occ-low/up.png (station cut-outs drawn over the cabins), hcc-cloud-mask.png (where the valley cloud may show).
+
+Known: the picture is pixel-style art resized to 1080p, not a strict pixel grid.
+Not yet seen on Windows.

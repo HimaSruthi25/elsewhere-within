@@ -1,0 +1,6 @@
+Tool: Figma generate_image (model gpt-image-2.5-sunburst, 1 Figma AI credit), 31 Oct 2026
+File "Elsewhere train concepts" (se4kqzsYVbGfU5oAcqbQCV), node 24:3
+Native output: 1536x864 (hillside-cable-car-source.png in this folder). The scene uses library/scenes/hillside-cable-car/hillside-cable-car.jpg (cabins cut out and the background filled, Lanczos + light unsharp to 1920x1080).
+Terms: Figma AI terms https://www.figma.com/legal/ai-terms/ (check before release)
+
+Wide 16:9 detailed pixel art illustration in a retro 16-bit game background style, crisp visible pixels, no text, no logos, no characters. A hillside cable car at dusk: two small red-and-cream gondola cabins hanging from a long steel cable that runs diagonally from a wooden lower station up to a hilltop station, above a terraced hill town of whitewashed houses with tiled roofs, steps and tiny lit windows, a layer of soft lavender clouds drifting in the valley below the upper station, pine trees on the ridge, a warm orange-to-indigo sky with a thin crescent moon and a few stars, cable towers with small red lamps. Calm, cozy, nostalgic.
