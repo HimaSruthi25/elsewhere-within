@@ -1,0 +1,5 @@
+Sunset Ruins (Anime & Illustrated Worlds) - living world, drawn fully in code
+Approved by Hima 2 Nov 2026 (preview v0.1, Artifact PTirzg1cqKwFWiEq6fEzRv).
+Endless side-scrolling ruins at sunset; a cloaked lantern traveller walks, jumps pits, touches crystals and sits by campfires on their own.
+Wallpaper: move the mouse = guide the traveller; rest still ~6 s = they sit; hand near a crystal = it glows.
+No pictures, no network. Follows the PC clock (dawn/day/dusk/night).

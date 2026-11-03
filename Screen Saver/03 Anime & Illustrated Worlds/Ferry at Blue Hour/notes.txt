@@ -1,0 +1,28 @@
+Ferry at Blue Hour — Anime & Illustrated Worlds
+Approved by Hima: idea 31 Oct 2026 (batch 11 #1); preview v0.3 approved 31 Oct 2026
+(v0.2: "the boat should also move", wake "looks like a picture moving up and down";
+ v0.3: "why isn't there any change in the locations?" -> she chose sail away + course changes).
+
+Tool: Figma AI generate_image (gemini-3.1-flash-lite-image), 31 Oct 2026, file "Elsewhere train concepts"
+(se4kqzsYVbGfU5oAcqbQCV) node 22:2. Native 1376x768 (ferry-at-blue-hour-source.jpg in this folder).
+Usage terms: Figma AI terms (https://www.figma.com/legal/ai-terms/) — check before a public release.
+Scene picture: resized to 1920x1080 (Lanczos + light unsharp; no AI upscaler), the 3 painted gulls painted out
+(OpenCV Telea). Made in Python from it:
+- ferry-at-blue-hour-mask.png (640x360): R water, G wake, B beyond the rail (not the boat), A warm lights
+- ferry-at-blue-hour-land.png (960x540): R town, G left headland, B middle hill (the shores that move)
+- ferry-at-blue-hour-bg.jpg (1920x1080): sky continued behind the shores, water refilled without the painted
+  wake/reflections
+
+Motion (WebGL shader + 2D canvas):
+- the deck, rail, bench and lamp roll and heave against a level horizon
+- the water and its waves slide away from the stern; live foam wake (painted shape, code foam streaming away)
+- one crossing = 8 min: the shores shrink toward their far ends as the ferry sails away (nearer = faster),
+  the course wanders so they glide sideways at different speeds; reflections drawn from the shores;
+  at the end a sea mist covers the horizon (~30 s), the next crossing starts behind it, and it clears
+- lamp flicker + warm light pool; glints; town lights breathe; stars (more at night); 3 gulls in code
+- time of day from the PC clock (dusk = the painting)
+
+Wallpaper interaction (no on-screen instructions):
+- move across the sky: a gull comes to glide beside the hand; rest still: it circles the hand;
+  leave the sky: it drifts back out over the bay; click: it flaps and lifts
+Screensaver mode ignores the interaction. Reduced motion: one still frame (60 s into a crossing).

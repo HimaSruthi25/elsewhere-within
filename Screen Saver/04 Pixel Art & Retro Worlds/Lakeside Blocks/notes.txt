@@ -1,0 +1,5 @@
+Lakeside Blocks (Pixel Art & Retro Worlds) - living world, drawn fully in code (WebGL2)
+Approved by Hima 2 Nov 2026 (preview v0.1, Artifact CxCgtoyj7RBJdiUKaXLbK7).
+Our own blocky (voxel) village by a lake - no Minecraft textures, creatures or logo. Ducks, rabbits, a sleeping cat, chimney smoke, rain showers, fireflies at night, and a house that builds itself block by block.
+Wallpaper: hover over the lake = ripples; rest the hand on the water = ducks swim over.
+No pictures, no network. Heavy in software rendering - check smoothness on a real GPU.
