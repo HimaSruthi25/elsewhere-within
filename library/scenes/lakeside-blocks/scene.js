@@ -294,8 +294,8 @@ void main(){
   vec3 n=normalize(vNrm);
   vec3 L=vL.xyz/vL.w*0.5+0.5; float sh=0.;
   vec2 ts=vec2(1./2048.);
-  for(int i=-1;i<=1;i++) for(int j=-1;j<=1;j++) sh+=texture(uShadow, vec3(L.xy+vec2(i,j)*ts*1.3, L.z-0.0018));
-  sh/=9.; if(L.x<0.||L.x>1.||L.y<0.||L.y>1.) sh=1.;
+  for(int i=0;i<2;i++) for(int j=0;j<2;j++) sh+=texture(uShadow, vec3(L.xy+(vec2(i,j)-0.5)*ts*1.6, L.z-0.0018));
+  sh/=4.; if(L.x<0.||L.x>1.||L.y<0.||L.y>1.) sh=1.;
   float nd=max(dot(n,uSun),0.);
   vec3 base=toLin(vCol);
   // bevelled toy-block edge
@@ -360,7 +360,7 @@ export function mount(container, ctx = {}) {
   const cv = document.createElement('canvas'); cv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block'
   const ov = document.createElement('canvas'); ov.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none'
   container.appendChild(cv); container.appendChild(ov)
-  const gl = cv.getContext('webgl2', { antialias: true, alpha: false })
+  const gl = cv.getContext('webgl2', { antialias: false, alpha: false, powerPreference: 'low-power' })
   if (!gl) throw new Error('WebGL2 not available')
   const g2 = ov.getContext('2d')
 
@@ -426,7 +426,11 @@ export function mount(container, ctx = {}) {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
   const sfb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, sfb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, stex, 0); gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-  const SHADOWS_EVERY_FRAME = true
+  // Shadows of the still world (terrain, plants, house site) are drawn once into a cached map and only
+  // redrawn when the sun moves or the site changes; each frame copies the cache and adds the moving things.
+  const ctex = gl.createTexture()
+  gl.bindTexture(gl.TEXTURE_2D, ctex); gl.texStorage2D(gl.TEXTURE_2D, 1, gl.DEPTH_COMPONENT24, SM, SM)
+  const cfb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, cfb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, ctex, 0); gl.bindFramebuffer(gl.FRAMEBUFFER, null)
   let shadowDirty = true
 
   // ---------- state ----------
@@ -662,32 +666,44 @@ export function mount(container, ctx = {}) {
   // ---------- render ----------
   function draw() {
     buildDynamic()
-    if (shadowDirty || SHADOWS_EVERY_FRAME) { // sun, clouds and creatures move, so shadows redraw each frame
-      computeLight()
-      gl.bindFramebuffer(gl.FRAMEBUFFER, sfb); gl.viewport(0, 0, SM, SM)
-      gl.clear(gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST); gl.colorMask(false, false, false, false)
-      gl.useProgram(PS.p); gl.uniformMatrix4fv(PS.u.uLVP, false, LVP)
+    { // shadows: still world from the cache (redrawn only when dirty) + the moving things on top
+      gl.enable(gl.DEPTH_TEST); gl.colorMask(false, false, false, false)
+      gl.useProgram(PS.p)
       gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(2, 4)
-      for (const m of [terrain, detail, siteM, dyn]) if (m.n) { gl.bindVertexArray(m.vao); gl.drawArrays(gl.TRIANGLES, 0, m.n) }
+      gl.viewport(0, 0, SM, SM)
+      if (shadowDirty) {
+        computeLight(); gl.uniformMatrix4fv(PS.u.uLVP, false, LVP)
+        gl.bindFramebuffer(gl.FRAMEBUFFER, cfb); gl.clear(gl.DEPTH_BUFFER_BIT)
+        for (const m of [terrain, detail, siteM]) if (m.n) { gl.bindVertexArray(m.vao); gl.drawArrays(gl.TRIANGLES, 0, m.n) }
+        shadowDirty = false
+      }
+      gl.uniformMatrix4fv(PS.u.uLVP, false, LVP)
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, cfb); gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, sfb)
+      gl.blitFramebuffer(0, 0, SM, SM, 0, 0, SM, SM, gl.DEPTH_BUFFER_BIT, gl.NEAREST)
+      gl.bindFramebuffer(gl.FRAMEBUFFER, sfb)
+      if (dyn.n) { gl.bindVertexArray(dyn.vao); gl.drawArrays(gl.TRIANGLES, 0, dyn.n) }
       gl.disable(gl.POLYGON_OFFSET_FILL); gl.colorMask(true, true, true, true)
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null); shadowDirty = false
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null)
     }
     gl.viewport(0, 0, W, H)
     gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     const sd = norm(cur.sun)
     const rainDim = 1 - weather.rain * 0.35
     const sunCol = cur.sunCol.map((v) => v * rainDim), skyTop = cur.skyTop.map((v) => lerp(v, 0.45 * (1 - cur.night * 0.8), weather.rain * 0.5)), skyHor = cur.skyHor.map((v) => lerp(v, 0.6 * (1 - cur.night * 0.8), weather.rain * 0.5))
-    // sky
-    gl.disable(gl.DEPTH_TEST); gl.useProgram(PK.p)
-    gl.uniformMatrix4fv(PK.u.uInv, false, INV); gl.uniform3fv(PK.u.uSun, sd); gl.uniform3fv(PK.u.uTop, skyTop); gl.uniform3fv(PK.u.uHor, skyHor); gl.uniform3fv(PK.u.uSunCol, sunCol); gl.uniform1f(PK.u.uNight, cur.night); gl.uniform1f(PK.u.uTime, t)
-    gl.bindVertexArray(null); gl.drawArrays(gl.TRIANGLES, 0, 3)
     // world
     gl.enable(gl.DEPTH_TEST); gl.useProgram(P.p)
     gl.uniformMatrix4fv(P.u.uVP, false, VP); gl.uniformMatrix4fv(P.u.uLVP, false, LVP)
     gl.uniform3fv(P.u.uSun, sd); gl.uniform3fv(P.u.uSunCol, sunCol); gl.uniform3fv(P.u.uAmb, cur.amb.map((v) => v * (1 - weather.rain * 0.15))); gl.uniform3fv(P.u.uGround, cur.ground)
     gl.uniform3fv(P.u.uFog, cur.fog.map((v, i) => lerp(v, skyHor[i], 0.3))); gl.uniform3fv(P.u.uEye, eye); gl.uniform1f(P.u.uNight, cur.night); gl.uniform1f(P.u.uTime, t); gl.uniform1f(P.u.uWet, weather.rain)
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, stex); gl.uniform1i(P.u.uShadow, 0)
+    gl.enable(gl.CULL_FACE) // block faces turned away from the camera are skipped
     for (const m of [terrain, detail, siteM, dyn]) if (m.n) { gl.bindVertexArray(m.vao); gl.drawArrays(gl.TRIANGLES, 0, m.n) }
+    gl.disable(gl.CULL_FACE)
+    // sky after the world (depth-tested at the far plane), so covered pixels are skipped
+    gl.depthFunc(gl.LEQUAL); gl.depthMask(false); gl.useProgram(PK.p)
+    gl.uniformMatrix4fv(PK.u.uInv, false, INV); gl.uniform3fv(PK.u.uSun, sd); gl.uniform3fv(PK.u.uTop, skyTop); gl.uniform3fv(PK.u.uHor, skyHor); gl.uniform3fv(PK.u.uSunCol, sunCol); gl.uniform1f(PK.u.uNight, cur.night); gl.uniform1f(PK.u.uTime, t)
+    gl.bindVertexArray(null); gl.drawArrays(gl.TRIANGLES, 0, 3)
+    gl.depthFunc(gl.LESS); gl.depthMask(true)
     // water
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false)
     gl.useProgram(PW.p)
@@ -700,7 +716,11 @@ export function mount(container, ctx = {}) {
     drawOverlay()
   }
   const proj = (p) => { const q = M.xf(VP, p); if (q[3] <= 0 || q[2] > 1) return null; return [(q[0] * 0.5 + 0.5) * W, (1 - (q[1] * 0.5 + 0.5)) * H, q[3]] }
+  let ovShown = true
   function drawOverlay() {
+    const need = cur.night > 0.2 || weather.rain > 0.02
+    if (need !== ovShown) { ovShown = need; ov.style.display = need ? 'block' : 'none' }
+    if (!need) return
     g2.clearRect(0, 0, W, H)
     const n = cur.night
     if (n > 0.2) {
