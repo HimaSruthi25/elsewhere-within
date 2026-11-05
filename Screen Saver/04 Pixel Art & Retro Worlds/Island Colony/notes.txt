@@ -1,0 +1,19 @@
+Island Colony - Pixel Art & Retro Worlds (library scene: island-colony)
+Simulation idea S1 (5 Nov 2026, Hima: "game style... simulation type"), approved by Hima 5 Nov (preview v0.1, Artifact 6paEvSKb7xUPUg5JxbJ166).
+
+What moves
+- Five painted villagers were cut out of the picture (their spots refilled from nearby path/grass) and walk a waypoint graph on the painted paths with jobs: woodcutter (chops, carries logs to the build), gatherer (field -> crates), dock worker, wanderer, builder. At night they walk home and the windows + cooking fire glow.
+- The windmill sails were cut out and turn with a slowly varying wind (the tower behind them was rebuilt; a small soft patch left of the tower shows when the sails turn away).
+- A second fishing boat (half-size copy of the painted boat) sails in from the left, waits off the dock and sails away again.
+- Drifting cloud copies with shadows, gulls, sea glints, foam washing the shore, fire smoke, float ripples and a jumping fish, dust at the painted builder and farmer.
+- The island grows: five hut spots (copy of a painted hut, scaled/flipped) are built one after another in stages - stakes, scaffold, walls and roof - while the builder works (~85 s each, a new one every 40-60 s until all five stand). Starts again small each time the scene starts.
+- Time of day (PC clock): dawn pinker, day = the picture, dusk orange, night blue with lit windows.
+
+Live wallpaper (hover only)
+- Rest the mouse ~1 s near an empty patch of sand/grass: a flag goes in and that spot is built next.
+
+Files (library/scenes/island-colony/)
+- scene.js, meta.js, island-colony.jpg (1920x1080, villagers + sails removed), ic-villager-a/c/f/h/j.png, ic-sails.png, ic-hut.png, ic-boat.png, ic-cloud.png, ic-foam.png (shore foam), ic-seamask.png (where sea glints may show).
+
+Known: pixel-style art resized to 1080p, not a strict pixel grid. Painted villagers that stay (cook, farmer, builder, fisherman, one near a hut) don't walk.
+Not yet seen on Windows.

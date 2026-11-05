@@ -1,0 +1,6 @@
+Tool: Figma generate_image (model gpt-image-2.5-sunburst, 1 Figma AI credit), 5 Nov 2026
+File "Elsewhere train concepts" (se4kqzsYVbGfU5oAcqbQCV), node 37:2
+Native output: 1536x864 (island-colony-source.png in this folder). The scene uses library/scenes/island-colony/island-colony.jpg (villagers and windmill sails cut out and the background filled, Lanczos + light unsharp to 1920x1080).
+Terms: Figma AI terms https://www.figma.com/legal/ai-terms/ (check before release)
+
+Cozy simulation game screenshot look, isometric pixel art, 16:9, no UI, no text, no logos, no watermark. A small green island in a turquoise sea at golden afternoon: a tiny village of six thatched huts, a wooden dock with a little fishing boat, a vegetable field in neat rows, a half-built hut with scaffolding and stacked logs, a windmill, palm and fruit trees, a sandy beach with crates, smoke from a cooking fire; about ten tiny original villagers (simple round heads, coloured tunics) busy carrying logs, hoeing the field, fishing from the dock and walking paths; gentle waves with foam around the shore, small clouds and their shadows. Crisp pixels, warm cheerful palette.

@@ -1,0 +1,20 @@
+Valley Railway - Anime & Illustrated Worlds (library scene: valley-railway)
+Simulation idea S3 (5 Nov 2026), approved by Hima 5 Nov (preview v0.1, Artifact 8dJnfAb5aNntFgdqPEmSHk).
+
+What moves
+- The painted train was removed (background filled, viaduct deck and rails rebuilt). A train (engine + 3 green/cream coaches, drawn in code as 2.5D boxes with lit windows) runs one loop traced on the painted rails: out of the tunnel, across the viaduct, round the left station (stops ~12 s), through the village, over the level crossing and the bridge, up the right curve and back into the tunnel (waits 6-22 s inside). Speeds up and brakes smoothly; smoke from the engine.
+- A red two-car shuttle runs back and forth on the right-hand station track and stops at the platform.
+- Level crossing: the barrier arm lowers and the red lamps blink while the train passes; cars (cut from the painting, some recoloured) queue at the stop line, keep their distance and drive on.
+- The ferry (cut from the painting) crosses the river and waits at each end; wake and funnel smoke.
+- Waterfalls and rapids shimmer; town and window lights twinkle.
+- Time of day (PC clock): the picture is dusk; dawn tint, day a little warmer, night deep blue with the painted lights restored and train/car lights glowing.
+
+Live wallpaper (hover only)
+- Hover a station: its next train waits longer there and the platform lamps and carriage windows glow brighter.
+
+Files (library/scenes/valley-railway/)
+- scene.js, meta.js, paths.js (track loop, shuttle track, road, ferry ends, light points traced on the picture)
+- valley-railway.jpg (1920x1080, train/barrier/cars/ferry removed), vr-ferry.png, vr-car-grey/red/blue1/blue2.png, vr-lights.png (lit windows, restored at night), vr-falls.png + vr-rapids.png (white-water masks), vr-water.png (where water glints may show).
+
+Known: the code trains are simple box shapes (plainer than the painting); a soft blurred patch on the road where the painted cars were.
+Not yet seen on Windows.

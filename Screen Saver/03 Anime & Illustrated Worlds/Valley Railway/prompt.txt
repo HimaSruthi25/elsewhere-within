@@ -1,0 +1,6 @@
+Tool: Figma generate_image (model gpt-image-2.5-sunburst, 1 Figma AI credit), 5 Nov 2026
+File "Elsewhere train concepts" (se4kqzsYVbGfU5oAcqbQCV), node 37:4
+Native output: 1536x864 (valley-railway-source.png in this folder). The scene uses library/scenes/valley-railway/valley-railway.jpg (painted train, barrier arm, cars and ferry removed, Lanczos + light unsharp to 1920x1080).
+Terms: Figma AI terms https://www.figma.com/legal/ai-terms/ (check before release)
+
+Miniature diorama simulation game look, high three-quarter view from above, painted anime-illustration style, 16:9, no UI, no text, no logos, no watermark. A small valley model railway world at dusk: a looping single-track railway with a short original passenger train (green and cream carriages) crossing an arched stone viaduct over a river, a tunnel through a pine hill, two small stations with platforms and lamps, level crossing with a barrier and waiting tiny cars on a winding road, a village of tile-roofed houses with lit windows, terraced fields, a waterfall, a ferry on the river, street lamps glowing. Soft tilt-shift depth, warm window lights against blue dusk.
