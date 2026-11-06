@@ -1,0 +1,6 @@
+Cipher Desk (Dashboard). Idea: Hima. Approved by Hima 6 Nov 2026 (preview v0.5).
+Code: a new cipher on the paper at 09:00; pencil hints 12:00 key, 15:00 cipher name, 17:00 first word; 18:00 answer inked letter by letter + "How it was solved"; before 09:00 yesterday's solved case (first day: "Your first case arrives at 09:00.").
+Levels by day (counted from the first day the scene runs, localStorage ew.cipherDesk.start): 1 Caesar 1-3, 2 Atbash, 3 number code A=1, 4 keyboard code, 5 Caesar + backwards words (short detective lines), then Caesar without spaces, keyword, Vigenere, rail fence, columnar, Vigenere long key, Playfair, Vigenere + rail fence.
+Ambient: coffee steam, dust in the window light, green lamp glow, dawn/day/dusk/night grade.
+Touch (hover only): rest on a letter or number -> every copy lights up with a count.
+Test hooks: ?cipherDay=N&cipherMin=minutes. Checked headless only; not yet seen on Windows.
