@@ -22,18 +22,31 @@ access while a scene runs.
 |---|---|
 | ![Rainy Window](docs/screenshots/rainy-window.jpg) | **Rainy Window** (Cozy Spaces)<br>A lamp-lit desk and a city in the rain. Raindrops run down the glass, the lamp glows and the cup steams. |
 | ![Study Night](docs/screenshots/study-night.jpg) | **Study Night** (Cozy Spaces)<br>Someone reading by the window at night, headphones on, rain on the glass. As a wallpaper you can draw in the fogged glass. |
+| ![Houseboat Morning](docs/screenshots/houseboat-morning.jpg) | **Houseboat Morning** (Cozy Spaces)<br>A houseboat in the early light. |
+| ![Cipher Desk](docs/screenshots/cipher-desk.jpg) | **Cipher Desk** (Dashboard)<br>A detective's desk with a new coded message every day, harder each day. Clues arrive through the day and it solves itself at 18:00 with the steps. |
+| ![Clockmaker's Almanac](docs/screenshots/clockmakers-almanac.jpg) | **Clockmaker's Almanac** (Dashboard)<br>A clockmaker's bench with a swinging pendulum and the date. |
 | ![Dashboard Clock](docs/screenshots/dashboard-clock.jpg) | **Dashboard Clock** (Dashboard)<br>A large, quiet time and date over slow colour that follows the time of day. It drifts a little every few minutes so nothing burns into the screen. |
+| ![Tea Hills in Morning Mist](docs/screenshots/tea-hills.jpg) | **Tea Hills in Morning Mist** (Dreamscapes & Landscapes)<br>Terraced tea hills with mist drifting through. |
+| ![Last Train Platform](docs/screenshots/last-train-platform.jpg) | **Last Train Platform** (Anime & Illustrated Worlds)<br>A rainy night platform. A steam train passes and a sleeping cat follows your cursor. |
+| ![Lighthouse Cove](docs/screenshots/lighthouse-cove.jpg) | **Lighthouse Cove** (Anime & Illustrated Worlds)<br>A quiet coast with a lighthouse. |
+| ![Ferry at Blue Hour](docs/screenshots/ferry-at-blue-hour.jpg) | **Ferry at Blue Hour** (Anime & Illustrated Worlds)<br>A ferry crossing at blue hour: the deck rocks and the shores slide away over an 8-minute crossing. |
+| ![Night Market Alley](docs/screenshots/night-market-alley.jpg) | **Night Market Alley** (Anime & Illustrated Worlds)<br>A glowing night market alley. |
+| ![Valley Railway](docs/screenshots/valley-railway.jpg) | **Valley Railway** (Anime & Illustrated Worlds)<br>A train loops through a painted valley with a viaduct, a bridge, a tunnel and a crossing. |
+| ![Island Colony](docs/screenshots/island-colony.jpg) | **Island Colony** (Pixel Art & Retro Worlds)<br>A tiny island that builds itself: villagers with jobs, a windmill, boats and gulls. |
+| ![Hillside Cable Car](docs/screenshots/hillside-cable-car.jpg) | **Hillside Cable Car** (Pixel Art & Retro Worlds)<br>Two cabins shuttle along cables over a valley at dusk. |
 
-More scenes in the library:
+Pictures above are each scene's artwork (the live motion is added in code on top).
 
-- **Dashboard:** *Cipher Desk* (a detective's desk with a new coded message every day, harder each day; clues arrive through the day and it solves itself at 18:00 with the steps), *Clockmaker's Almanac*
-- **Cozy Spaces:** *Houseboat Morning*
-- **Dreamscapes & Landscapes:** *Living Pond* (touchable water, paper boats, fish and frogs), *Follow the Light*, *Tea Hills in Morning Mist*, *Cloud Pasture* (a patchwork countryside from above, with sheep and crops that live through their year)
-- **Anime & Illustrated Worlds:** *Last Train Platform*, *Lighthouse Cove*, *Ferry at Blue Hour*, *Night Market Alley*, *Sunset Ruins*, *Valley Railway* (a train loops through a painted valley)
-- **Pixel Art & Retro Worlds:** *Island Colony* (a tiny island that builds itself), *Hillside Cable Car*, *Lakeside Blocks*
-- **Seasons & Special Moments:** *Ginkgo Courtyard* (an autumn courtyard; leaves blow in the wind)
+Drawn fully in code, so no picture yet:
 
-Screenshots for the newer scenes will be added as they are checked on real PCs.
+- **Living Pond** (Dreamscapes & Landscapes): touchable water with paper boats, fish and frogs.
+- **Follow the Light** (Dreamscapes & Landscapes): a soft light to follow with your eyes.
+- **Cloud Pasture** (Dreamscapes & Landscapes): a patchwork countryside from above, with sheep and crops that live through their year.
+- **Ginkgo Courtyard** (Seasons & Special Moments): an autumn courtyard where the leaves blow in the wind.
+- **Sunset Ruins** (Anime & Illustrated Worlds): a lantern traveller exploring ruins at sunset.
+- **Lakeside Blocks** (Pixel Art & Retro Worlds): a blocky village by a lake.
+
+Screenshots for these will be added as they are checked on real PCs.
 
 As a screensaver, every scene ends gently: when you move the mouse or press a key it fades out
 with a soft ring from your cursor (about half a second) and you are back at the
