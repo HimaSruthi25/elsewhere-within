@@ -2,14 +2,18 @@
 
 **A place to feel.**
 
-Quiet, silent scenes for your Windows screen: a rainy window with a lit lamp, a
-late-night study, a living pond with paper boats, fish and frogs, a soft light
-to follow with your eyes, a calm clock. Each scene is its own entry in Windows Screen
-Saver Settings. Nothing is downloaded while it runs, nothing is recorded, and
-there is no sound.
+Free, silent, offline scenes for your Windows screen: small living worlds that
+move on their own, follow your PC clock, and can also play behind your desktop
+icons as an interactive live wallpaper. There are 20 scenes so far: a rainy
+window, a living pond with paper boats and frogs, a pixel island that builds
+itself, a train looping through a painted valley, a detective's desk with a new
+coded message every day, and more. Each scene is its own entry in Windows Screen
+Saver Settings. No ads, no accounts, no tracking, no sound, and no network
+access while a scene runs.
 
-> **v0.1 Preview — tested on two Windows PCs** (Windows 11 and a two-monitor 22H2 PC). It works there, but it has not
-> met your hardware yet. That is exactly why it is public: please try it and
+> **v0.x Preview.** The first scenes were tested on two Windows PCs (Windows 11 and a
+> two-monitor 22H2 PC). Newer scenes have had less testing, and none of it has met
+> your hardware yet. That is exactly why it is public: please try it and
 > tell me what happens (see [Feedback](#feedback)).
 
 ## Scenes
@@ -17,8 +21,19 @@ there is no sound.
 | | |
 |---|---|
 | ![Rainy Window](docs/screenshots/rainy-window.jpg) | **Rainy Window** (Cozy Spaces)<br>A lamp-lit desk and a city in the rain. Raindrops run down the glass, the lamp glows and the cup steams. |
-| ![Study Night](docs/screenshots/study-night.jpg) | **Study Night** (Cozy Spaces)<br>Someone reading by the window at night, headphones on, rain on the glass. |
+| ![Study Night](docs/screenshots/study-night.jpg) | **Study Night** (Cozy Spaces)<br>Someone reading by the window at night, headphones on, rain on the glass. As a wallpaper you can draw in the fogged glass. |
 | ![Dashboard Clock](docs/screenshots/dashboard-clock.jpg) | **Dashboard Clock** (Dashboard)<br>A large, quiet time and date over slow colour that follows the time of day. It drifts a little every few minutes so nothing burns into the screen. |
+
+More scenes in the library:
+
+- **Dashboard:** *Cipher Desk* (a detective's desk with a new coded message every day, harder each day; clues arrive through the day and it solves itself at 18:00 with the steps), *Clockmaker's Almanac*
+- **Cozy Spaces:** *Houseboat Morning*
+- **Dreamscapes & Landscapes:** *Living Pond* (touchable water, paper boats, fish and frogs), *Follow the Light*, *Tea Hills in Morning Mist*, *Cloud Pasture* (a patchwork countryside from above, with sheep and crops that live through their year)
+- **Anime & Illustrated Worlds:** *Last Train Platform*, *Lighthouse Cove*, *Ferry at Blue Hour*, *Night Market Alley*, *Sunset Ruins*, *Valley Railway* (a train loops through a painted valley)
+- **Pixel Art & Retro Worlds:** *Island Colony* (a tiny island that builds itself), *Hillside Cable Car*, *Lakeside Blocks*
+- **Seasons & Special Moments:** *Ginkgo Courtyard* (an autumn courtyard; leaves blow in the wind)
+
+Screenshots for the newer scenes will be added as they are checked on real PCs.
 
 As a screensaver, every scene ends gently: when you move the mouse or press a key it fades out
 with a soft ring from your cursor (about half a second) and you are back at the
@@ -57,7 +72,11 @@ The same scenes can also play **behind your desktop icons** as a live wallpaper
   talks to the scene: in Rainy Window and Study Night, drag across the glass to wipe the mist. Because of
   that, a left-drag on the bare desktop does not draw the usual selection rectangle while the wallpaper
   runs; **Pause** it from the tray when you want that.
-- It needs Windows 10 or 11 with the WebView2 Runtime, and is tested on one Windows 11 PC only.
+- **Hand control (optional, off by default):** tick **Hand control (camera)** in the tray menu and some scenes
+  (for example Ginkgo Courtyard and Cloud Pasture) react to you waving at your webcam. Only motion blocks reach the
+  scene; nothing is recorded, saved or sent. It works on the main monitor only, and the camera closes whenever the
+  scene is paused. This is a preview feature and has had little testing.
+- It needs Windows 10 or 11 with the WebView2 Runtime, and has been tested on two Windows PCs.
   See [the test checklist](docs/wallpaper-test-checklist.md).
 ## Uninstall
 
@@ -67,7 +86,7 @@ This removes the program and its log, and puts the screensaver setting back to
 
 ## Known limitations
 
-- Only tested on one Windows 11 PC so far. Other Windows 10/11 machines, multiple
+- Only tested on two Windows PCs so far. Other Windows 10/11 machines, multiple
   monitors, high-DPI and older graphics are untested.
 - With several monitors, the scene plays on the main screen; the others go black.
 - The installer is not code-signed, so SmartScreen warns once. The updater trusts GitHub plus the checksum published next to each release; it cannot prove who built a release.
@@ -78,8 +97,11 @@ This removes the program and its log, and puts the screensaver setting back to
 
 ## Privacy
 
-The scenes run entirely on your PC: they do not use the microphone, camera or location, and
-all network requests from a scene are blocked.
+The scenes run entirely on your PC: they do not use the microphone or location, and
+all network requests from a scene are blocked. The camera is used only if you switch on
+**Hand control (camera)** in the live wallpaper's tray menu (off by default, wallpaper only,
+never the screensaver); frames are reduced to small grey images in memory to detect motion
+and are never stored or sent.
 
 **The only part that goes online is the updater** (`ElsewhereUpdate.exe`). Once a day and at
 sign-in it asks `api.github.com` for this project's latest release. If a newer one exists it
@@ -121,7 +143,7 @@ powershell -ExecutionPolicy Bypass -File screensaver\build-installer.ps1  # rele
 ## Credits
 
 - Lake photograph: **Ivan Dimitrov** on [Unsplash](https://unsplash.com/) (used by the original web experiment).
-- Illustrations (Rainy Window, Study Night): AI-generated for Elsewhere, Within with ChatGPT; the rain, lamp glow, steam and other motion are drawn in code. The image files carry their original content-credentials (C2PA) metadata.
+- Illustrations: AI-generated for Elsewhere, Within (ChatGPT and other AI image tools, some upscaled with Real-ESRGAN); the rain, lamp glow, steam and other motion are drawn in code. Some scenes (such as Living Pond and Cipher Desk) are drawn fully in code. The image files carry their original content-credentials (C2PA) metadata.
 - Microsoft Edge WebView2 provides the web view (redistributed under Microsoft's terms).
 
 ## License
