@@ -1,0 +1,2 @@
+Tool: Canva generate-image, 7 Nov 2026 (first picture) - the first attempt was a painted look; turned into pixel art in code.
+Prompt: Original pixel-art scene, 16:9: a small hillside canal town at golden dusk with a staircase of three canal locks climbing a green hill, wooden barges queued at the lower gate, one barge rising inside a lock chamber, a brick warehouse at the top with crates on a jetty, tiny houses with lit windows, warm lamps on the lock gates, reflections on the water, rich detailed 16-bit palette, cozy and calm, no text, no logos

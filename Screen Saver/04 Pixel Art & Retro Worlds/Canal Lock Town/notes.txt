@@ -1,0 +1,9 @@
+Canal Lock Town - Pixel Art & Retro Worlds (library scene: canal-lock-town)
+Preview v0.1 approved by Hima 9 Nov 2026. Not yet seen on Windows; speed on her GPU unchecked.
+
+Picture: Canva AI image generation (1680x944), first sample picture, 7 Nov 2026. Turned into real pixel art in code: reduced to 480x270 (box filter), 48-colour palette, enlarged x4 (nearest) to 1920x1080.
+Code layers (4 px grid): canal water shimmer + lamp reflections, lamp and window glow/flicker, chimney smoke, bats at dusk/night/dawn, drifting sunset clouds, water falling at the three lock sills, lock signals (red = resting, green = being worked).
+Every 55-80 s one lock is worked (green signal, foam, lamps flare ~14 s).
+Hover (wallpaper): rest the mouse ~0.6 s over a lock -> that lock is worked at once.
+Time of day: dawn / day / dusk (= the painting) / night. reducedMotion: one still frame.
+Not in v0.1: barges rising through the locks (barges are painted into the picture; they would need cutting out first).

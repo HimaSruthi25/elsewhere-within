@@ -1,0 +1,8 @@
+Tide Harbour Clock - Dashboard (library scene: tide-harbour-clock)
+Preview v0.1 approved by Hima 9 Nov 2026. Not yet seen on Windows; speed on her GPU unchecked.
+
+Picture: Canva AI image generation (1680x944), 7 Nov 2026, resized to 1920x1080 (Lanczos + light sharpening).
+Code layers: chalk tide board (live time, rising/falling, gauge), boats rise with the tide and rock, harbour water shimmer, lantern/house lamp flicker, lighthouse flash + faint beam, distant fishing boat with a lantern crossing every 2-4 min (more often near high tide), stars at night.
+The tide is an illustrative offline model (12 h 25 min cycle with a 14.8-day spring/neap swing), NOT real tide tables.
+Hover (wallpaper): rest the mouse on the board -> date + next high and low tide.
+Time of day: dawn / day / dusk (= the painting) / night. reducedMotion: one still frame, redrawn each minute.
