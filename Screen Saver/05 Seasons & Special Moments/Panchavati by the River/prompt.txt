@@ -1,0 +1,15 @@
+PICTURE (Figma AI generate_image, gpt-image-2.5-sunburst, 1536x864, 13 Nov 2026)
+
+A wide, serene, richly detailed digital painting of the Panchavati forest hermitage from the Ramayana, soft painterly realism with luminous warm golden-hour light, cinematic 16:9 landscape composition. On the right half, on a grassy river bank under a huge old banyan tree with hanging roots, three figures at peaceful rest, painted fairly large (each figure about 40 percent of the picture height) so that their faces are clear, finely painted, well-proportioned, symmetrical and beautiful, with calm gentle smiles and open kind eyes, faces turned three-quarters toward the viewer: Lord Rama in the middle-left of the group, soft blue complexion, handsome serene young face, long dark hair tied in a topknot, a small tilak on the forehead, wearing a saffron-yellow dhoti and upper cloth with a simple bead necklace, seated calmly on a flat rock with his bow resting beside him; Sita seated beside him in a red and gold sari, graceful gentle face, hair in a bun with white flowers, stringing a garland of white jasmine in her hands, a basket of flowers beside her; Lakshmana with fair complexion, topknot, cream dhoti, standing watchfully just behind them holding a tall bow, a quiver on his back. At the far right edge, part of a small thatched bamboo hut with a doorway, a small clay oil lamp on a stone by the door and a tulsi plant in a clay pot. The left half opens onto the broad calm Godavari river curving into the distance, smooth reflective water clearly visible across the lower left, lotus flowers and leaves near the bank, smooth river stones, and two spotted deer drinking at the far water's edge on the left. Flowering trees and deep green forest frame the scene, blue misty hills far away, a low golden sun above the hills, a large open soft golden sky with gentle clouds in the upper left. Harmonious palette of saffron, deep greens, river blue and gold. No birds in the sky, no text, no border, no watermark.
+
+VIDEO (Google Gemini, image to video, made by Hima, 13 Nov 2026)
+
+Animate this picture as a calm living painting. Keep the camera completely still: no zoom, no pan, no cut. Keep the same soft painted style and keep every face exactly as it is in the picture.
+
+Rama (blue skin, saffron clothes, seated) breathes gently, blinks, and slowly turns his head a little toward Sita with a soft smile, then back.
+Sita (red sari) keeps stringing white jasmine flowers onto the garland with small natural finger movements, glances down at her hands and up again, and blinks.
+Lakshmana (standing with the bow) shifts his weight slightly, breathes, blinks, and slowly looks out along the river and back.
+
+The river flows gently with soft ripples and shimmering golden sun reflections. The two deer drink and lift their heads. Lotus flowers and leaves sway on the water. Banyan leaves and hanging roots sway in a light breeze and a few leaves drift down. The small oil lamp flame flickers. Clouds drift very slowly.
+
+Slow, peaceful, natural motion. Nobody speaks. No new people or animals, no text. End in the same pose as the start. No sound needed.

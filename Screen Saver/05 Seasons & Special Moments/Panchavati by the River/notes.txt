@@ -1,0 +1,36 @@
+Panchavati by the River — Seasons & Special Moments
+Hima's own idea, 13 Nov 2026: she sent a reference picture of Rama, Sita and Lakshmana in the forest and asked
+for a living-world wallpaper, "a bit more aesthetic". She chose a painted picture with life on top and the moment
+"Panchavati hut by the river". v0.1 (first picture): "ram's face is distorted". v0.2 (new picture, figures bent
+in code): "it doesn't look good...can we make it into video". v0.3 (her Gemini video as the base): she asked to
+make the wallpaper with that first video.
+
+Picture: Figma AI generate_image (gpt-image-2.5-sunburst), 13 Nov 2026, file se4kqzsYVbGfU5oAcqbQCV node 44:2.
+Native 1536x864 (panchavati-by-the-river-source.jpg in this folder). A new composition, not a copy of the
+reference picture. Scene picture: resized to 1920x1080 (Lanczos + light unsharp; no AI upscaler).
+Usage terms: Figma AI terms (https://www.figma.com/legal/ai-terms/) — check before a public release.
+
+Video: made by Hima in Google Gemini from the 1920x1080 picture with the prompt in prompt.txt
+("panch_vatika.mp4": 1280x720, 24 fps, 10 s, with sound). The Gemini sparkle mark at the bottom right is in
+the video and was left in (rule: never remove watermarks). Usage terms: Google Gemini / Veo terms — check
+before a public release.
+Loop made in Python (OpenCV) + ffmpeg: the clip's end does not match its start, so the figures' side (right of
+the banyan trunk, soft mask) plays forward then backward with eased turnarounds, and the left side (sky, river,
+deer, lotus, falling leaves) plays forward only with a 1 s dissolve at its loop point. 432 frames = 18 s,
+enlarged to 1920x1080 (Lanczos + light unsharp), silent, H.264 CRF 24, 8.9 MB
+(library/scenes/panchavati-by-the-river/panchavati-by-the-river.mp4).
+
+Masks made in Python from the picture (960x540, alpha only): -water.png (river), -sky.png (open sky).
+
+Motion: the video (figures breathe, blink, turn their heads; Sita strings the garland; river, deer, leaves, lamp).
+In code on a 2D canvas over it: light by the PC clock (dawn mist, day as filmed, deeper dusk, blue night with
+stars, a moon where the sun was, fireflies, lamp and hut glow), sun rays, bird flocks, an egret, butterflies,
+a fish rising now and then.
+Live wallpaper (hover only): move over the river -> ripples; rest on the water -> a wider ring; rest on the
+bank -> flower petals drift down.
+Reduced motion: the still picture, no video. While the host freezes the frame loop, the video is paused.
+
+Checked in the cloud only (13 Nov 2026): eslint, npm test, test:library, build:library, built site headless in
+screensaver and wallpaper mode (host pointer move, freeze/unfreeze) with no errors. Not seen on Windows;
+speed and video playback in the WebView2 host unchecked. First scene with a video file: adds about 9 MB to the
+installer.

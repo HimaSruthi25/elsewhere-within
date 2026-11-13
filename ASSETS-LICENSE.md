@@ -5,6 +5,7 @@ The MIT license in `LICENSE` covers the **code** only.
 The **artwork** in this repository is covered by this notice instead:
 
 - `library/scenes/*/*.jpg`, the illustrations used by the scenes
+- `library/scenes/*/*.png` and `library/scenes/*/*.mp4`, the masks and the video made from those illustrations
 - everything in `Screen Saver/` (source art and prompts)
 - `docs/screenshots/`
 
@@ -16,6 +17,9 @@ wallpapers, prints, stock images, or inside another product).
 
 The illustrations were AI-generated for Elsewhere, Within with ChatGPT or Figma AI
 (Last Train Platform, upscaled with Real-ESRGAN).
+
+The video in Panchavati by the River was AI-generated from its illustration with
+Google Gemini; the Gemini mark in it has been kept.
 
 Not covered by this notice: the lake photographs in `public/assets/` are by
 Ivan Dimitrov, from Unsplash, and remain under the
